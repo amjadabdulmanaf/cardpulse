@@ -326,10 +326,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         },
         items: const [
           FluidNavItem(icon: Icons.grid_view_rounded, label: 'Dashboard'),
-          FluidNavItem(icon: Icons.credit_card_rounded, label: 'Cards'),
-          FluidNavItem(icon: Icons.calendar_month_rounded, label: 'EMIs'),
-          FluidNavItem(icon: Icons.receipt_long_rounded, label: 'Spends'),
-          FluidNavItem(icon: Icons.settings_rounded, label: 'Settings'),
+          FluidNavItem(icon: Icons.credit_card_outlined, label: 'Cards'),
+          FluidNavItem(icon: Icons.timelapse_rounded, label: 'EMIs'),
+          FluidNavItem(icon: Icons.insights_rounded, label: 'Spends'),
+          FluidNavItem(icon: Icons.settings_outlined, label: 'Settings'),
         ],
       ),
     );
