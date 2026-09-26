@@ -6,7 +6,7 @@ import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  GoogleFonts.config.allowRuntimeFetching = true;
+  GoogleFonts.config.allowRuntimeFetching = false; // 100% Offline Local Asset Fonts
   final storageService = StorageService();
   await storageService.init();
 

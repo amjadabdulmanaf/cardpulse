@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/credit_card.dart';
@@ -11,7 +10,6 @@ import '../widgets/add_card_dialog.dart';
 import '../widgets/animated_counter_text.dart';
 import '../widgets/animated_percent_text.dart';
 import '../widgets/animated_progress_bar.dart';
-import '../widgets/metro_card_pulse_logo.dart';
 import '../widgets/metro_tile_flip_entrance.dart';
 import '../widgets/notifications_sheet.dart';
 import 'card_details_screen.dart';
@@ -66,77 +64,6 @@ class _CardsScreenState extends State<CardsScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) => AddCardSheet(
         onSave: widget.onAddCard,
-      ),
-    );
-  }
-
-  void _confirmDeleteCard(CreditCard card) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        padding: EdgeInsets.only(
-          top: 20,
-          left: 20,
-          right: 20,
-          bottom: MediaQuery.of(ctx).padding.bottom + 20,
-        ),
-        decoration: const BoxDecoration(
-          color: Color(0xFF121212),
-          borderRadius: BorderRadius.zero,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.warning_amber_rounded, color: Color(0xFFB91C1C), size: 36),
-            const SizedBox(height: 10),
-            Text(
-              'DELETE CREDIT CARD?',
-              style: GoogleFonts.spaceGrotesk(color: const Color(0xFFB91C1C), fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Are you sure you want to delete "${card.cardName}" (${card.bank})? Associated transactions and EMIs will also be removed.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 12),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Color(0xFF2D2D2D)),
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                    ),
-                    child: Text('Cancel', style: GoogleFonts.spaceGrotesk(color: Colors.white)),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFB91C1C),
-                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-                    ),
-                    child: Text('Delete Card', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
-                    onPressed: () {
-                      Navigator.of(ctx).pop();
-                      widget.onDeleteCard(card.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Deleted "${card.cardName}" card.'),
-                          backgroundColor: const Color(0xFFB91C1C),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -498,6 +425,7 @@ class _CardsScreenState extends State<CardsScreen> {
                             direction: DismissDirection.endToStart,
                             confirmDismiss: (direction) async {
                               bool confirmed = false;
+                              final messenger = ScaffoldMessenger.of(context);
                               await showModalBottomSheet(
                                 context: context,
                                 backgroundColor: Colors.transparent,
@@ -560,9 +488,9 @@ class _CardsScreenState extends State<CardsScreen> {
                                   ),
                                 ),
                               );
-                              if (confirmed) {
+                              if (confirmed && mounted) {
                                 widget.onDeleteCard(card.id);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text('Deleted "${card.cardName}" card.'),
                                     backgroundColor: const Color(0xFFB91C1C),

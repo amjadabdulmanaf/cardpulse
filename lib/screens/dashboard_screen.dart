@@ -43,14 +43,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final int _activeCardIndex = 0;
-
   @override
   Widget build(BuildContext context) {
     final sortedCards = CycleCalculator.sortCardsByReset(widget.cards);
-    final safeIndex = (sortedCards.isNotEmpty && _activeCardIndex < sortedCards.length)
-        ? _activeCardIndex
-        : 0;
 
     // Consolidated Active Cycles Stats
     double activeCyclesTotalSpend = 0.0;
@@ -981,7 +976,7 @@ class _LiveScrollingCardTileState extends State<LiveScrollingCardTile> {
                 ],
               ),
               const SizedBox(height: 6),
-              Text('RESETTING SOON', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+              Text('0% USED', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
               const SizedBox(height: 2),
               Text('No Cards', style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
             ],
@@ -1015,6 +1010,10 @@ class _LiveScrollingCardTileState extends State<LiveScrollingCardTile> {
             final daysLeft = cycle.daysRemaining > 0 ? cycle.daysRemaining : 1;
             final safeDaily = (available / daysLeft).roundToDouble();
 
+            final percentVal = card.monthlyLimit > 0
+                ? ((spend / card.monthlyLimit) * 100).round()
+                : 0;
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1033,7 +1032,7 @@ class _LiveScrollingCardTileState extends State<LiveScrollingCardTile> {
                   ],
                 ),
                 const SizedBox(height: 6),
-                Text('RESETTING SOON', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+                Text('$percentVal% USED', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 2),
                 Text(
                   '${card.bank} ${card.cardName}',
@@ -1064,31 +1063,4 @@ class _LiveScrollingCardTileState extends State<LiveScrollingCardTile> {
       ),
     );
   }
-}
-
-class _PulseLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = LinearGradient(
-        colors: const [Color(0xFF0078D7), Color(0xFF008A00), Color(0xFFF09609)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final path = Path();
-    path.moveTo(0, size.height * 0.5);
-    path.lineTo(size.width * 0.25, size.height * 0.5);
-    path.lineTo(size.width * 0.4, size.height * 0.1);
-    path.lineTo(size.width * 0.6, size.height * 0.9);
-    path.lineTo(size.width * 0.75, size.height * 0.5);
-    path.lineTo(size.width, size.height * 0.5);
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

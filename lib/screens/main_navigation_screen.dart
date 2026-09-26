@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/credit_card.dart';
 import '../models/emi.dart';
@@ -35,11 +36,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   List<TransactionItem> _transactions = [];
   List<EmiItem> _emis = [];
   bool _isLoading = true;
+  Timer? _liveAutoSyncTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Live In-App Realtime Auto-Sync Timer (runs every 15s while app is open)
+    _liveAutoSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _autoScanSms();
+    });
+  }
+
+  @override
+  void dispose() {
+    _liveAutoSyncTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -59,9 +71,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _autoScanSms() async {
-    if (_cards.isEmpty) return;
+    if (_cards.isEmpty) {
+      return;
+    }
     final isAutoReadOn = await widget.storageService.getAutoReadSms();
-    if (!isAutoReadOn) return;
+    if (!isAutoReadOn) {
+      return;
+    }
 
     try {
       final parsed = await SmsService.fetchAndParseSms(_cards);
@@ -87,7 +103,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             amount: p.amount,
             date: p.date,
           );
-          if (isDeleted) continue;
+          if (isDeleted) {
+            continue;
+          }
 
           final isDup = existing.any((t) =>
             t.cardId == tx.cardId &&
@@ -242,6 +260,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  void _incrementKeyCounter(int index) {
+    if (index == 0) {
+      _cardsKeyCounter++;
+      return;
+    }
+    if (index == 1) {
+      _emisKeyCounter++;
+      return;
+    }
+    if (index == 2) {
+      _dashboardKeyCounter++;
+      return;
+    }
+    if (index == 3) {
+      _spendsKeyCounter++;
+      return;
+    }
+    if (index == 4) {
+      _settingsKeyCounter++;
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -256,11 +297,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // Helper to increment keys and switch tab
     void selectTab(int index) {
       setState(() {
-        if (index == 0) _cardsKeyCounter++;
-        else if (index == 1) _emisKeyCounter++;
-        else if (index == 2) _dashboardKeyCounter++;
-        else if (index == 3) _spendsKeyCounter++;
-        else if (index == 4) _settingsKeyCounter++;
+        _incrementKeyCounter(index);
         _currentIndex = index;
       });
     }
@@ -301,8 +338,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         transactions: _transactions,
         emis: _emis,
         onAddCard: _openAddCardDialog,
-        onAddEmi: (card) => _openAddEmiDialog(initialCard: card),
-        onAddSpend: (card) => _openAddTransactionDialog(initialCard: card),
+        onAddEmi: (card) {
+          _openAddEmiDialog(initialCard: card);
+        },
+        onAddSpend: (card) {
+          _openAddTransactionDialog(initialCard: card);
+        },
         onScanSms: _openSmsScanner,
         onNavigateTab: selectTab,
       ),
