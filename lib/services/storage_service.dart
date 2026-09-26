@@ -265,6 +265,8 @@ class StorageService {
   }
 
   static const String _kAutoReadSmsKey = 'cardpulse_auto_read_sms';
+  static const String _kAlertThresholdKey = 'cardpulse_alert_threshold';
+  static const String _kCycleResetAlertKey = 'cardpulse_cycle_reset_alert';
 
   Future<bool> getAutoReadSms() async {
     return _prefs?.getBool(_kAutoReadSmsKey) ?? true;
@@ -272,6 +274,22 @@ class StorageService {
 
   Future<void> setAutoReadSms(bool enabled) async {
     await _prefs?.setBool(_kAutoReadSmsKey, enabled);
+  }
+
+  Future<double> getAlertThreshold() async {
+    return _prefs?.getDouble(_kAlertThresholdKey) ?? 80.0;
+  }
+
+  Future<void> setAlertThreshold(double threshold) async {
+    await _prefs?.setDouble(_kAlertThresholdKey, threshold);
+  }
+
+  Future<bool> getCycleResetAlert() async {
+    return _prefs?.getBool(_kCycleResetAlertKey) ?? true;
+  }
+
+  Future<void> setCycleResetAlert(bool enabled) async {
+    await _prefs?.setBool(_kCycleResetAlertKey, enabled);
   }
 
   Future<void> flushCache() async {

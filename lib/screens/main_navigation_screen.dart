@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/credit_card.dart';
 import '../models/emi.dart';
@@ -25,16 +26,32 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
+  int _currentIndex = 2; // Landing page = START in center
+  int _dashboardKeyCounter = 0;
+  int _cardsKeyCounter = 0;
+  int _emisKeyCounter = 0;
+  int _spendsKeyCounter = 0;
+  int _settingsKeyCounter = 0;
   List<CreditCard> _cards = [];
   List<TransactionItem> _transactions = [];
   List<EmiItem> _emis = [];
   bool _isLoading = true;
+  Timer? _liveAutoSyncTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    // Live In-App Realtime Auto-Sync Timer (runs every 15s while app is open)
+    _liveAutoSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      _autoScanSms();
+    });
+  }
+
+  @override
+  void dispose() {
+    _liveAutoSyncTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -54,9 +71,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Future<void> _autoScanSms() async {
-    if (_cards.isEmpty) return;
+    if (_cards.isEmpty) {
+      return;
+    }
     final isAutoReadOn = await widget.storageService.getAutoReadSms();
-    if (!isAutoReadOn) return;
+    if (!isAutoReadOn) {
+      return;
+    }
 
     try {
       final parsed = await SmsService.fetchAndParseSms(_cards);
@@ -82,7 +103,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             amount: p.amount,
             date: p.date,
           );
-          if (isDeleted) continue;
+          if (isDeleted) {
+            continue;
+          }
 
           final isDup = existing.any((t) =>
             t.cardId == tx.cardId &&
@@ -237,6 +260,29 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 
+  void _incrementKeyCounter(int index) {
+    if (index == 0) {
+      _cardsKeyCounter++;
+      return;
+    }
+    if (index == 1) {
+      _emisKeyCounter++;
+      return;
+    }
+    if (index == 2) {
+      _dashboardKeyCounter++;
+      return;
+    }
+    if (index == 3) {
+      _spendsKeyCounter++;
+      return;
+    }
+    if (index == 4) {
+      _settingsKeyCounter++;
+      return;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -248,22 +294,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       );
     }
 
+    // Helper to increment keys and switch tab
+    void selectTab(int index) {
+      setState(() {
+        _incrementKeyCounter(index);
+        _currentIndex = index;
+      });
+    }
+
     // Screens list for 5 Bottom Nav Tabs
     final screens = [
-      // 1. Dashboard / Home
-      DashboardScreen(
-        storageService: widget.storageService,
-        cards: _cards,
-        transactions: _transactions,
-        emis: _emis,
-        onAddCard: _openAddCardDialog,
-        onAddEmi: (card) => _openAddEmiDialog(initialCard: card),
-        onAddSpend: (card) => _openAddTransactionDialog(initialCard: card),
-        onScanSms: _openSmsScanner,
-      ),
-
-      // 2. Cards Manager
+      // 0. Cards Manager
       CardsScreen(
+        key: ValueKey('cards_$_cardsKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -276,8 +319,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onScanSms: _openSmsScanner,
       ),
 
-      // 3. EMI Management
+      // 1. EMI Management
       EmiListScreen(
+        key: ValueKey('emis_$_emisKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -286,8 +330,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onDeleteEmi: _deleteEmi,
       ),
 
-      // 4. Spends / Full Transactions
+      // 2. START / Dashboard (Landing Page)
+      DashboardScreen(
+        key: ValueKey('dashboard_$_dashboardKeyCounter'),
+        storageService: widget.storageService,
+        cards: _cards,
+        transactions: _transactions,
+        emis: _emis,
+        onAddCard: _openAddCardDialog,
+        onAddEmi: (card) {
+          _openAddEmiDialog(initialCard: card);
+        },
+        onAddSpend: (card) {
+          _openAddTransactionDialog(initialCard: card);
+        },
+        onScanSms: _openSmsScanner,
+        onNavigateTab: selectTab,
+      ),
+
+      // 3. Spends / Full Transactions
       TransactionsScreen(
+        key: ValueKey('spends_$_spendsKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -298,8 +361,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onRefresh: _openSmsScanner,
       ),
 
-      // 5. Settings
+      // 4. Settings
       SettingsScreen(
+        key: ValueKey('settings_$_settingsKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -310,7 +374,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F19),
+      backgroundColor: const Color(0xFF121212),
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
@@ -319,17 +383,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       // Dynamic Fluid Design Bottom Navigation Bar
       bottomNavigationBar: FluidBottomNavBar(
         selectedIndex: _currentIndex,
-        onTabSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTabSelected: selectTab,
         items: const [
-          FluidNavItem(icon: Icons.grid_view_rounded, label: 'Dashboard'),
-          FluidNavItem(icon: Icons.credit_card_rounded, label: 'Cards'),
-          FluidNavItem(icon: Icons.calendar_month_rounded, label: 'EMIs'),
-          FluidNavItem(icon: Icons.receipt_long_rounded, label: 'Spends'),
-          FluidNavItem(icon: Icons.settings_rounded, label: 'Settings'),
+          FluidNavItem(icon: Icons.credit_card_outlined, label: 'CARDS'),
+          FluidNavItem(icon: Icons.calendar_today_outlined, label: 'EMIS'),
+          FluidNavItem(icon: Icons.grid_view_rounded, label: 'START', isCenter: true),
+          FluidNavItem(icon: Icons.insights_rounded, label: 'SPENDS'),
+          FluidNavItem(icon: Icons.settings_outlined, label: 'SETTINGS'),
         ],
       ),
     );

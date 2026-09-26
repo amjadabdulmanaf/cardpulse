@@ -8,6 +8,12 @@ class Formatters {
     decimalDigits: 0,
   );
 
+  static final NumberFormat _plainNumberFormat = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: '',
+    decimalDigits: 0,
+  );
+
   static final NumberFormat _currencyDecimalFormat = NumberFormat.currency(
     locale: 'en_IN',
     symbol: '₹',
@@ -19,6 +25,10 @@ class Formatters {
       return _currencyDecimalFormat.format(amount);
     }
     return _currencyFormat.format(amount);
+  }
+
+  static String formatCurrencyWithoutSymbol(double amount) {
+    return _plainNumberFormat.format(amount).trim();
   }
 
   /// Formats date to "Oct-26" like in the user reference image

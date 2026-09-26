@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'screens/splash_screen.dart';
 import 'services/storage_service.dart';
+import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false; // 100% Offline Local Asset Fonts
   final storageService = StorageService();
   await storageService.init();
 
@@ -21,26 +24,8 @@ class CardPulseApp extends StatelessWidget {
       title: 'CardPulse',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF10B981), // Emerald Green Primary
-          brightness: Brightness.dark,
-          surface: const Color(0xFF0B0F19), // Dark Charcoal Slate
-        ),
-        scaffoldBackgroundColor: const Color(0xFF0B0F19),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0B0F19),
-          elevation: 0,
-          scrolledUnderElevation: 0,
-        ),
-        cardTheme: CardThemeData(
-          color: const Color(0xFF161F30),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      ),
+      theme: AppTheme.darkTheme,
+      darkTheme: AppTheme.darkTheme,
       home: SplashScreen(storageService: storageService),
     );
   }
