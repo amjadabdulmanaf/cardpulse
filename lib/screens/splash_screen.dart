@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/storage_service.dart';
+import '../widgets/metro_card_pulse_logo.dart';
 import 'main_navigation_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,8 +17,8 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
+  late Animation<double> _flipAnimation;
+  late Animation<double> _opacityAnimation;
 
   @override
   void initState() {
@@ -23,21 +26,26 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1000),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+    // Windows 8 Metro 3D Y-Axis Flip Entrance
+    _flipAnimation = Tween<double>(begin: -math.pi / 2, end: 0.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
 
-    _animationController.forward();
+    Timer(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _animationController.forward();
+      }
+    });
 
-    // Navigate to MainNavigationScreen after 2.2 seconds
-    Timer(const Duration(milliseconds: 2200), () {
+    // Navigate to MainNavigationScreen after 2.0 seconds
+    Timer(const Duration(milliseconds: 2000), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
@@ -46,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
-            transitionDuration: const Duration(milliseconds: 500),
+            transitionDuration: const Duration(milliseconds: 400),
           ),
         );
       }
@@ -62,164 +70,121 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F19), // Dark Charcoal Slate
-      body: Stack(
-        children: [
-          // Background Gradient Glow
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.25,
-            left: MediaQuery.of(context).size.width * 0.2,
-            child: Container(
-              width: 240,
-              height: 240,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                    blurRadius: 100,
-                    spreadRadius: 40,
-                  ),
-                ],
-              ),
-            ),
-          ),
+      backgroundColor: const Color(0xFF121212), // Metro Obsidian Background
+      body: Center(
+        child: AnimatedBuilder(
+          animation: _animationController,
+          builder: (context, child) {
+            final angle = _flipAnimation.value;
+            final opacity = _opacityAnimation.value;
 
-          // Main Center Branding Content
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
+            return Transform(
+              alignment: Alignment.center,
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.002) // 3D Perspective depth
+                ..rotateY(angle),
+              child: Opacity(
+                opacity: opacity,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    // CardPulse Logo Container
-                    Container(
-                      width: 90,
-                      height: 90,
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF161F30), Color(0xFF1E293D)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(26),
-                        border: Border.all(
-                          color: const Color(0xFF34D399).withValues(alpha: 0.5),
-                          width: 2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                            blurRadius: 24,
-                            spreadRadius: 4,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.credit_score,
-                        color: Color(0xFF34D399),
-                        size: 48,
-                      ),
+                    // Sleek Credit Card Pulse Logo
+                    const MetroCardPulseLogo(
+                      width: 110,
+                      height: 70,
                     ),
 
                     const SizedBox(height: 24),
 
                     // App Title
-                    RichText(
-                      text: const TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Card',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'Pulse',
-                            style: TextStyle(
-                              color: Color(0xFF34D399), // Mint Green
-                              fontSize: 32,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      'CARDPULSE',
+                      style: GoogleFonts.spaceGrotesk(
+                        color: Colors.white,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 2.0,
                       ),
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
 
-                    // Tagline
-                    const Text(
-                      'Offline Credit Card & EMI Manager',
-                      style: TextStyle(
-                        color: Color(0xFF9CA3AF),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
+                    // Subtitle
+                    Text(
+                      'OFFLINE CREDIT CARD & EMI ENGINE',
+                      style: GoogleFonts.spaceGrotesk(
+                        color: const Color(0xFFA0A0A0),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
                       ),
                     ),
 
                     const SizedBox(height: 36),
 
-                    // Animated Progress Indicator
-                    const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF34D399)),
-                      ),
-                    ),
+                    // Metro Rolling Dots Progress Indicator
+                    const _MetroRollingDotsProgress(),
                   ],
                 ),
               ),
-            ),
-          ),
-
-          // Bottom Privacy Badge
-          Positioned(
-            bottom: 40,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF161F30),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF222F46)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.shield_outlined, color: Color(0xFF34D399), size: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        '100% On-Device • Zero Cloud • Air-Gapped Vault',
-                        style: TextStyle(
-                          color: Color(0xFF34D399),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
+    );
+  }
+}
+
+/// Windows 8 Metro Dot Rolling Progress Animation
+class _MetroRollingDotsProgress extends StatefulWidget {
+  const _MetroRollingDotsProgress();
+
+  @override
+  State<_MetroRollingDotsProgress> createState() => _MetroRollingDotsProgressState();
+}
+
+class _MetroRollingDotsProgressState extends State<_MetroRollingDotsProgress>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(5, (index) {
+            final progress = (_controller.value + (index * 0.15)) % 1.0;
+            final opacity = (math.sin(progress * math.pi)).clamp(0.2, 1.0);
+
+            return Container(
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: opacity),
+                shape: BoxShape.rectangle, // Windows Metro square dots!
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

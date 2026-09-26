@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/credit_card.dart';
@@ -9,6 +10,8 @@ import '../utils/formatters.dart';
 import '../widgets/animated_counter_text.dart';
 import '../widgets/animated_percent_text.dart';
 import '../widgets/animated_progress_bar.dart';
+import '../widgets/metro_card_pulse_logo.dart';
+import '../widgets/metro_tile_flip_entrance.dart';
 import '../widgets/notifications_sheet.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -20,6 +23,7 @@ class DashboardScreen extends StatefulWidget {
   final Function(CreditCard?) onAddEmi;
   final Function(CreditCard?) onAddSpend;
   final VoidCallback onScanSms;
+  final Function(int)? onNavigateTab;
 
   const DashboardScreen({
     super.key,
@@ -31,6 +35,7 @@ class DashboardScreen extends StatefulWidget {
     required this.onAddEmi,
     required this.onAddSpend,
     required this.onScanSms,
+    this.onNavigateTab,
   });
 
   @override
@@ -38,20 +43,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _activeCardIndex = 0;
-  late PageController _cardPageController;
-
-  @override
-  void initState() {
-    super.initState();
-    _cardPageController = PageController();
-  }
-
-  @override
-  void dispose() {
-    _cardPageController.dispose();
-    super.dispose();
-  }
+  final int _activeCardIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -90,9 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final now = DateTime.now();
     double totalEmiCommitment = 0.0;
     int selfEmiCount = 0;
-    double selfEmiTotal = 0.0;
     int otherEmiCount = 0;
-    double otherEmiTotal = 0.0;
 
     for (final emi in widget.emis) {
       final monthlyAmt = emi.getAmountForDate(now);
@@ -100,10 +90,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         totalEmiCommitment += monthlyAmt;
         if (emi.type == EmiType.self) {
           selfEmiCount++;
-          selfEmiTotal += monthlyAmt;
         } else {
           otherEmiCount++;
-          otherEmiTotal += monthlyAmt;
         }
       }
     }
@@ -114,44 +102,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
       emis: widget.emis,
     );
 
+    // Combined Active Cycle Spends List
+    final combinedActiveSpends = <TransactionItem>[...widget.transactions];
+
+    for (final emi in widget.emis) {
+      final card = widget.cards.firstWhere(
+        (c) => c.id == emi.cardId,
+        orElse: () => CreditCard(
+          id: '',
+          cardName: 'Card',
+          bank: 'Bank',
+          last4: '0000',
+          monthlyLimit: 0,
+          billGenerationDay: 15,
+        ),
+      );
+      final cycle = CycleCalculator.getBillingCycle(card);
+
+      for (final item in emi.schedule) {
+        final isCurrentMonth = item.year == now.year && item.month == now.month;
+        final instDate = DateTime(item.year, item.month, card.billGenerationDay);
+        final inCycle = cycle.containsDate(instDate) ||
+            (item.year == cycle.startDate.year && item.month == cycle.startDate.month) ||
+            (item.year == cycle.endDate.year && item.month == cycle.endDate.month);
+        final isUnpaidDue = !item.isPaid && ((item.year < now.year) || (item.year == now.year && item.month <= now.month));
+
+        if (isCurrentMonth || inCycle || isUnpaidDue) {
+          combinedActiveSpends.add(TransactionItem(
+            id: 'emi_${emi.id}_${item.installmentNumber}',
+            cardId: emi.cardId,
+            title: emi.type == EmiType.others
+                ? '${emi.title} (${emi.beneficiaryName ?? "Others"})'
+                : '${emi.title} (EMI ${item.installmentNumber}/${emi.schedule.length})',
+            amount: item.amount,
+            date: instDate,
+            category: 'EMI',
+            isEmi: true,
+            emiId: emi.id,
+            isOthersSpend: emi.type == EmiType.others,
+            personName: emi.beneficiaryName,
+          ));
+          break;
+        }
+      }
+    }
+
+    combinedActiveSpends.sort((a, b) => b.date.compareTo(a.date));
+
+    final parsedSmsCount = widget.transactions.where((t) => t.rawSms != null && t.rawSms!.isNotEmpty).length;
+    final String autoSyncSubtext = widget.cards.isEmpty
+        ? 'Add credit card to enable SMS auto-parsing'
+        : (parsedSmsCount > 0
+            ? '$parsedSmsCount SMS spends parsed • Auto-sync active'
+            : 'SMS inbox scanned • Auto-sync active');
+
     return Scaffold(
-      backgroundColor: const Color(0xFF080B0F), // Obsidian Black
+      backgroundColor: const Color(0xFF0C0E12), // Windows Phone Dark Obsidian
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Top Bar Header
-              Row(
+        child: Column(
+          children: [
+            // 1. FIXED TOP HEADER BAR (Outside SingleChildScrollView)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: const Color(0xFF121212),
+              child: Row(
                 children: [
-                  // Pulse Wave Logo Icon
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF121620),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0x4D10B981)),
-                    ),
-                    child: Center(
-                      child: CustomPaint(
-                        size: const Size(18, 12),
-                        painter: _PulseLogoPainter(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
+                  const MetroCardPulseLogo(width: 30, height: 20),
+                  const SizedBox(width: 8),
                   Text(
                     'CardPulse',
-                    style: GoogleFonts.outfit(
+                    style: GoogleFonts.spaceGrotesk(
                       color: Colors.white,
-                      fontSize: 20,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 0.3,
+                      letterSpacing: 0.5,
                     ),
                   ),
                   const Spacer(),
+                  // Notification Bell Icon Button
                   Stack(
                     children: [
                       IconButton(
@@ -174,7 +202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             width: 8,
                             height: 8,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF00FFA3),
+                              color: Color(0xFF0078D7),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -183,55 +211,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(height: 16),
-
-              // 2. ACTIVE CYCLES TOTAL SPEND Card (Dynamic Animated Progress & Counters)
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF121620),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF1E2536)),
-                ),
+            // 2. SCROLLABLE LIVE TILES GRID
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Row
+                    // 3. Card 1: ACTIVE CYCLE SPEND (Solid Electric Blue Rectangular Tile with Metro Flip)
+                    MetroTileFlipEntrance(
+                      delayMs: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0078D7), // Solid Electric Blue
+                          borderRadius: BorderRadius.zero, // Windows Phone Sharp Edge
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.trending_up, color: Colors.white, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'ACTIVE CYCLE SPEND',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.zero,
+                                  ),
+                                  child: Text(
+                                    'LIVE',
+                                    style: GoogleFonts.spaceGrotesk(
+                                      color: const Color(0xFF0078D7),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 8),
+
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text(
-                          'ACTIVE CYCLES TOTAL SPEND',
+                        AnimatedCounterText(
+                          value: activeCyclesTotalSpend,
                           style: GoogleFonts.spaceGrotesk(
-                            color: const Color(0xFF94A3B8),
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
+                            color: Colors.white,
+                            fontSize: 34,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0x1F00FFA3),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0x4000FFA3)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.check_circle_outlined, size: 12, color: Color(0xFF00FFA3)),
-                              const SizedBox(width: 4),
-                              Text(
-                                'HEALTHY BUFFER',
-                                style: GoogleFonts.spaceGrotesk(
-                                  color: const Color(0xFF00FFA3),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          ' / ${Formatters.formatCurrency(activeCyclesTotalLimit)}',
+                          style: GoogleFonts.workSans(
+                            color: Colors.white70,
+                            fontSize: 15,
                           ),
                         ),
                       ],
@@ -239,50 +294,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     const SizedBox(height: 10),
 
-                    // Main Value & Utilization Row
+                    // Solid White Animated Progress Bar
+                    AnimatedProgressBar(
+                      value: activeCyclesTotalLimit > 0 ? (activeCyclesTotalSpend / activeCyclesTotalLimit) : 0.0,
+                      height: 6,
+                      color: Colors.white,
+                      backgroundColor: Colors.white30,
+                    ),
+
+                    const SizedBox(height: 12),
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            AnimatedCounterText(
-                              value: activeCyclesTotalSpend,
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            Text(
-                              ' / ${Formatters.formatCurrency(activeCyclesTotalLimit)}',
-                              style: GoogleFonts.plusJakartaSans(
-                                color: const Color(0xFF94A3B8),
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-
                         Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             AnimatedPercentText(
                               value: overallHealthPercent,
-                              style: GoogleFonts.outfit(
+                              suffix: '% UTILIZATION',
+                              style: GoogleFonts.spaceGrotesk(
                                 color: Colors.white,
-                                fontSize: 20,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              'UTILIZATION',
+                              '$minDaysRemaining days to reset',
+                              style: GoogleFonts.workSans(
+                                color: Colors.white70,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            AnimatedCounterText(
+                              value: bufferLeft,
                               style: GoogleFonts.spaceGrotesk(
-                                color: const Color(0xFF94A3B8),
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'BUFFER LEFT',
+                              style: GoogleFonts.spaceGrotesk(
+                                color: Colors.white70,
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.8,
@@ -292,722 +352,718 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // Dynamic Animated Neon Gradient Progress Bar
-                    AnimatedProgressBar(
-                      value: activeCyclesTotalLimit > 0 ? (activeCyclesTotalSpend / activeCyclesTotalLimit) : 0.0,
-                      height: 8,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF00FFA3), Color(0xFF10B981)],
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Footer Stats Columns
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Total Buffer Left', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 11)),
-                              const SizedBox(height: 2),
-                              AnimatedCounterText(
-                                value: bufferLeft,
-                                style: GoogleFonts.outfit(
-                                  color: const Color(0xFF00FFA3),
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Overall Utilization', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 11)),
-                              const SizedBox(height: 2),
-                              AnimatedPercentText(
-                                value: overallHealthPercent,
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Next Reset In', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 11)),
-                              const SizedBox(height: 2),
-                              Row(
-                                children: [
-                                  Text(
-                                    minDaysRemaining == 999 ? 'N/A' : '${minDaysRemaining}d',
-                                    style: GoogleFonts.outfit(
-                                      color: const Color(0xFF00FFA3),
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF00FFA3),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
                   ],
                 ),
               ),
+            ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 6),
 
-              // 3. EMIS DUE THIS MONTH Card
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF121620),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFF1E2536)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: const Color(0x2610B981),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.calendar_today_outlined, color: Color(0xFF00FFA3), size: 16),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'EMIS DUE THIS MONTH',
-                              style: GoogleFonts.spaceGrotesk(
-                                color: Colors.white,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E2536),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${widget.emis.length} ACTIVE',
-                            style: GoogleFonts.spaceGrotesk(
-                              color: const Color(0xFF94A3B8),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Total Commitment', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 11)),
-                              const SizedBox(height: 4),
-                              AnimatedCounterText(
-                                value: totalEmiCommitment,
-                                style: GoogleFonts.outfit(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('ALLOCATION SPLIT', style: GoogleFonts.spaceGrotesk(color: const Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('$selfEmiCount Self:', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 12)),
-                                  AnimatedCounterText(value: selfEmiTotal, style: GoogleFonts.outfit(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text('$otherEmiCount Other:', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF00FFA3), fontSize: 12, fontWeight: FontWeight.w600)),
-                                  AnimatedCounterText(value: otherEmiTotal, style: GoogleFonts.outfit(color: const Color(0xFF00FFA3), fontSize: 12, fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 4. Cards by Billing Cycle Header with Nav Controls
+              // 4. Grid Row 1 (Two Equal Width & Height Tile Cards Side-by-Side)
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Cards by Billing Cycle',
-                    style: GoogleFonts.outfit(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // Left Tile: EMIS THIS MONTH (Solid Green)
+                  Expanded(
+                    child: MetroTileFlipEntrance(
+                      delayMs: 120,
+                      child: SizedBox(
+                        height: 142,
+                        child: GestureDetector(
+                          onTap: () => widget.onNavigateTab?.call(1),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF008A00),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Icon(Icons.calendar_month, color: Colors.white, size: 18),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: const BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.zero),
+                                      child: Text(
+                                        Formatters.formatMonthLabel(now.year, now.month).split('-').first.toUpperCase(),
+                                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text('EMIS THIS MONTH', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 2),
+                                AnimatedCounterText(value: totalEmiCommitment, delayMs: 200, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+                                Text('${selfEmiCount + otherEmiCount} ACTIVE', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 10),
+                                Text('$selfEmiCount Self • $otherEmiCount Others', style: GoogleFonts.workSans(color: Colors.white70, fontSize: 11)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                  Row(
-                    children: [
-                      Text(
-                        'Swipe ${safeIndex + 1} of ${sortedCards.isEmpty ? 1 : sortedCards.length}',
-                        style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 12),
-                      ),
-                      const SizedBox(width: 8),
-                      // Left arrow
-                      InkWell(
-                        onTap: () {
-                          if (sortedCards.isNotEmpty) {
-                            final target = (_activeCardIndex - 1 + sortedCards.length) % sortedCards.length;
-                            _cardPageController.animateToPage(
-                              target,
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeOutCubic,
-                            );
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF121620),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF1E2536)),
-                          ),
-                          child: const Icon(Icons.chevron_left, size: 16, color: Colors.white70),
+
+                  const SizedBox(width: 6),
+
+                  // Right Tile: RESETTING SOON (Live Auto-Scrolling Card Tile)
+                  Expanded(
+                    child: MetroTileFlipEntrance(
+                      delayMs: 200,
+                      child: SizedBox(
+                        height: 142,
+                        child: LiveScrollingCardTile(
+                          cards: sortedCards,
+                          transactions: widget.transactions,
+                          emis: widget.emis,
+                          onTap: () => widget.onNavigateTab?.call(0),
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      // Right arrow
-                      InkWell(
-                        onTap: () {
-                          if (sortedCards.isNotEmpty) {
-                            final target = (_activeCardIndex + 1) % sortedCards.length;
-                            _cardPageController.animateToPage(
-                              target,
-                              duration: const Duration(milliseconds: 350),
-                              curve: Curves.easeOutCubic,
-                            );
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF121620),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF1E2536)),
-                          ),
-                          child: const Icon(Icons.chevron_right, size: 16, color: Colors.white70),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
 
-              // Interactive Swipeable PageView Cards Carousel
-              if (sortedCards.isEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF121620),
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFF1E2536)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.credit_card, color: Color(0xFF00FFA3), size: 36),
-                      const SizedBox(height: 8),
-                      Text('No Credit Cards Added', style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: widget.onAddCard,
-                        icon: const Icon(Icons.add, color: Color(0xFF00FFA3)),
-                        label: const Text('Add Credit Card', style: TextStyle(color: Colors.white)),
-                      ),
-                    ],
-                  ),
-                )
-              else
-                SizedBox(
-                  height: 235,
-                  child: PageView.builder(
-                    controller: _cardPageController,
-                    itemCount: sortedCards.length,
-                    onPageChanged: (index) {
-                      setState(() {
-                        _activeCardIndex = index;
-                      });
-                    },
-                    itemBuilder: (context, index) {
-                      final card = sortedCards[index];
-                      final cycle = CycleCalculator.getBillingCycle(card);
-                      final totalSpend = CycleCalculator.getTotalCycleSpend(
-                        card,
-                        widget.transactions,
-                        widget.emis,
-                        cycle: cycle,
-                      );
-                      final available = (card.monthlyLimit - totalSpend).clamp(0.0, double.infinity);
-                      final percentUsed = card.monthlyLimit > 0
-                          ? ((totalSpend / card.monthlyLimit) * 100)
-                          : 0.0;
+              // 5. Card 3: ACTIVE CYCLE SPENDS (Windows Phone Live Auto-Scrolling Tile with Metro Flip)
+              MetroTileFlipEntrance(
+                delayMs: 300,
+                child: LiveScrollingSpendTile(
+                  items: combinedActiveSpends,
+                  cards: widget.cards,
+                  onTap: () => widget.onNavigateTab?.call(3),
+                ),
+              ),
 
-                      final daysLeft = cycle.daysRemaining > 0 ? cycle.daysRemaining : 1;
-                      final safeDaily = (available / daysLeft).roundToDouble();
+              const SizedBox(height: 6),
 
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF121620),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF1E2536)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+              // 6. Grid Row 2 (Two Sharp Tile Cards Side-by-Side with Metro Flip)
+              Row(
+                children: [
+                  // Left Tile: Add EMI (Solid Crimson Red)
+                  Expanded(
+                    child: MetroTileFlipEntrance(
+                      delayMs: 420,
+                      child: SizedBox(
+                        height: 110,
+                        child: GestureDetector(
+                          onTap: () => widget.onAddEmi(null),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFB91C1C), // Solid Crimson Red
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFFFBBF24),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Center(
-                                    child: Icon(Icons.graphic_eq, size: 18, color: Colors.black),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${card.bank} ${card.cardName}',
-                                        style: GoogleFonts.outfit(
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black26,
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      child: Text(
+                                        'NEW',
+                                        style: GoogleFonts.spaceGrotesk(
                                           color: Colors.white,
-                                          fontSize: 16,
+                                          fontSize: 9,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      Text(
-                                        '📅 Cycle: ${Formatters.formatDateShort(cycle.startDate)} - ${Formatters.formatDateShort(cycle.endDate)}',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          color: const Color(0xFF00FFA3),
-                                          fontSize: 11,
+                                    ),
+                                  ],
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'Add EMI',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'LOG SPLIT OR CARD',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    color: Colors.white70,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 6),
+
+                  // Right Tile: Add Spend (Solid Dark Charcoal)
+                  Expanded(
+                    child: MetroTileFlipEntrance(
+                      delayMs: 500,
+                      child: SizedBox(
+                        height: 110,
+                        child: GestureDetector(
+                          onTap: () => widget.onAddSpend(null),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF262626), // Solid Dark Charcoal
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Icon(Icons.add_shopping_cart_rounded, color: Colors.white, size: 20),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black26,
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      child: Text(
+                                        'MANUAL',
+                                        style: GoogleFonts.spaceGrotesk(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0x1F00FFA3),
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: const Color(0x4000FFA3)),
-                                  ),
-                                  child: Text(
-                                    'Resets in ${cycle.daysRemaining}d',
-                                    style: GoogleFonts.spaceGrotesk(
-                                      color: const Color(0xFF00FFA3),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
                                     ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            // Spend vs Limit Label Row with Animated Counter
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text('Cycle Spend vs Limit', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 12)),
-                                Row(
-                                  children: [
-                                    AnimatedCounterText(
-                                      value: totalSpend,
-                                      style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                    ),
-                                    Text(' / ${Formatters.formatCurrency(card.monthlyLimit)}', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 12)),
                                   ],
                                 ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 6),
-
-                            // Dynamic Animated Progress Bar (increases / decreases smoothly on page swipe)
-                            AnimatedProgressBar(
-                              value: card.monthlyLimit > 0 ? (totalSpend / card.monthlyLimit) : 0.0,
-                              height: 6,
-                              color: const Color(0xFF00FFA3),
-                            ),
-
-                            const SizedBox(height: 6),
-
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                AnimatedPercentText(
-                                  value: percentUsed,
-                                  suffix: '% Used',
-                                  style: GoogleFonts.spaceGrotesk(color: const Color(0xFF94A3B8), fontSize: 11),
-                                ),
-                                Row(
-                                  children: [
-                                    AnimatedCounterText(
-                                      value: available,
-                                      style: GoogleFonts.spaceGrotesk(color: const Color(0xFF00FFA3), fontSize: 11, fontWeight: FontWeight.bold),
-                                    ),
-                                    Text(' Available', style: GoogleFonts.spaceGrotesk(color: const Color(0xFF00FFA3), fontSize: 11, fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            // 2 Metrics Boxes
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF080B0F),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: const Color(0xFF1E2536)),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Safe Daily Spend', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 10)),
-                                        const SizedBox(height: 2),
-                                        AnimatedCounterText(
-                                          value: safeDaily,
-                                          prefix: '₹',
-                                          style: GoogleFonts.outfit(color: const Color(0xFF00FFA3), fontSize: 13, fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
+                                const Spacer(),
+                                Text(
+                                  'Add Spend',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF080B0F),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: const Color(0xFF1E2536)),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('Next Bill Due', style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 10)),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          Formatters.formatDateShort(cycle.nextResetDate),
-                                          style: GoogleFonts.outfit(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'LOG REGULAR DEBIT',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    color: Colors.white70,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.8,
                                   ),
                                 ),
                               ],
                             ),
-                          ],
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ),
-
-              const SizedBox(height: 20),
-
-              // 5. Active Cycle Spends Section Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0x2610B981),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.receipt_long_outlined, color: Color(0xFF00FFA3), size: 16),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Active Cycle Spends',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0x1F00FFA3),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0x4D00FFA3)),
-                    ),
-                    child: Text(
-                      'Current Cycle Only',
-                      style: GoogleFonts.spaceGrotesk(
-                        color: const Color(0xFF00FFA3),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
 
+              const SizedBox(height: 6),
+
+              // 7. Tile 5: Auto-Parser Synced (Dark Grey Sharp Tile with Metro Flip)
+              MetroTileFlipEntrance(
+                delayMs: 580,
+                child: GestureDetector(
+                  onTap: widget.onScanSms,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1E1E1E),
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF262626),
+                            borderRadius: BorderRadius.zero,
+                          ),
+                          child: const Icon(Icons.check_box_outlined, color: Color(0xFF0078D7), size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Manual Transaction Sync',
+                                style: GoogleFonts.spaceGrotesk(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                autoSyncSubtext,
+                                style: GoogleFonts.workSans(
+                                  color: const Color(0xFFA0A0A0),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right, color: Colors.white70, size: 18),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+);
+  }
+}
+
+/// Windows Phone Live Auto-Scrolling Spend Tile
+class LiveScrollingSpendTile extends StatefulWidget {
+  final List<TransactionItem> items;
+  final List<CreditCard> cards;
+  final VoidCallback onTap;
+
+  const LiveScrollingSpendTile({
+    super.key,
+    required this.items,
+    required this.cards,
+    required this.onTap,
+  });
+
+  @override
+  State<LiveScrollingSpendTile> createState() => _LiveScrollingSpendTileState();
+}
+
+class _LiveScrollingSpendTileState extends State<LiveScrollingSpendTile> {
+  late PageController _pageController;
+  Timer? _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
+      if (!mounted || widget.items.isEmpty) return;
+      final nextIndex = (_currentIndex + 1) % widget.items.length;
+      _pageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 650),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.items.isEmpty) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Color(0xFF004880),
+            borderRadius: BorderRadius.zero,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.receipt_long, color: Colors.white, size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        'ACTIVE CYCLE SPENDS',
+                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  Text('0 TOTAL', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+                ],
+              ),
               const SizedBox(height: 12),
+              const Text('No cycle spends logged yet', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
 
-              // Active Cycle Spends List
-              Builder(
-                builder: (context) {
-                  final combinedActiveSpends = <TransactionItem>[...widget.transactions];
-
-                  for (final emi in widget.emis) {
-                    final card = widget.cards.firstWhere(
-                      (c) => c.id == emi.cardId,
-                      orElse: () => CreditCard(
-                        id: '',
-                        cardName: 'Card',
-                        bank: 'Bank',
-                        last4: '0000',
-                        monthlyLimit: 0,
-                        billGenerationDay: 15,
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        height: 135,
+        padding: const EdgeInsets.all(14),
+        decoration: const BoxDecoration(
+          color: Color(0xFF004880), // Windows Phone Dark Blue
+          borderRadius: BorderRadius.zero, // Sharp Edge Tile
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.receipt_long, color: Colors.white, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      'ACTIVE CYCLE SPENDS',
+                      style: GoogleFonts.spaceGrotesk(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
                       ),
-                    );
-                    final cycle = CycleCalculator.getBillingCycle(card);
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: const BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  child: Text(
+                    '${widget.items.length} TOTAL',
+                    style: GoogleFonts.spaceGrotesk(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
 
-                    for (final item in emi.schedule) {
-                      final isCurrentMonth = item.year == now.year && item.month == now.month;
-                      final instDate = DateTime(item.year, item.month, card.billGenerationDay);
-                      final inCycle = cycle.containsDate(instDate) ||
-                          (item.year == cycle.startDate.year && item.month == cycle.startDate.month) ||
-                          (item.year == cycle.endDate.year && item.month == cycle.endDate.month);
-                      final isUnpaidDue = !item.isPaid && ((item.year < now.year) || (item.year == now.year && item.month <= now.month));
+            const SizedBox(height: 6),
 
-                      if (isCurrentMonth || inCycle || isUnpaidDue) {
-                        combinedActiveSpends.add(TransactionItem(
-                          id: 'emi_${emi.id}_${item.installmentNumber}',
-                          cardId: emi.cardId,
-                          title: emi.type == EmiType.others
-                              ? '${emi.title} (${emi.beneficiaryName ?? "Others"})'
-                              : '${emi.title} (EMI ${item.installmentNumber}/${emi.schedule.length})',
-                          amount: item.amount,
-                          date: instDate,
-                          category: 'EMI',
-                          isEmi: true,
-                          emiId: emi.id,
-                          isOthersSpend: emi.type == EmiType.others,
-                          personName: emi.beneficiaryName,
-                        ));
-                        break;
-                      }
-                    }
-                  }
+            // Live Auto-Scrolling Vertical PageView Downwards
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical, // Downward vertical live scroll!
+                itemCount: widget.items.length,
+                onPageChanged: (idx) {
+                  setState(() {
+                    _currentIndex = idx;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final item = widget.items[index];
+                  final card = widget.cards.firstWhere(
+                    (c) => c.id == item.cardId,
+                    orElse: () => CreditCard(
+                      id: '',
+                      cardName: 'Card',
+                      bank: 'Bank',
+                      last4: '0000',
+                      monthlyLimit: 0,
+                      billGenerationDay: 15,
+                    ),
+                  );
 
-                  combinedActiveSpends.sort((a, b) => b.date.compareTo(a.date));
-
-                  if (combinedActiveSpends.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF121620),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF1E2536)),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'No Active Cycle Spends Recorded Yet',
-                          style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 12),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: combinedActiveSpends.length > 5 ? 5 : combinedActiveSpends.length,
-                    itemBuilder: (context, index) {
-                      final tx = combinedActiveSpends[index];
-                      final card = widget.cards.firstWhere(
-                        (c) => c.id == tx.cardId,
-                        orElse: () => CreditCard(
-                          id: '',
-                          cardName: 'Card',
-                          bank: 'Bank',
-                          last4: '0000',
-                          monthlyLimit: 0,
-                          billGenerationDay: 15,
-                        ),
-                      );
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF121620),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF1E2536)),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          tx.title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.outfit(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: tx.isEmi
-                                              ? const Color(0xFF1E2536)
-                                              : const Color(0x26FEF3C7),
-                                          borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(
-                                            color: tx.isEmi
-                                                ? const Color(0xFF334155)
-                                                : const Color(0x66FBBF24),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          tx.isEmi ? 'EMI Due' : '${card.bank} Cycle',
-                                          style: GoogleFonts.spaceGrotesk(
-                                            color: tx.isEmi ? const Color(0xFF94A3B8) : const Color(0xFFFBBF24),
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.spaceGrotesk(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${card.bank} •••• ${card.last4} • ${Formatters.formatDateShort(tx.date)}',
-                                    style: GoogleFonts.plusJakartaSans(color: const Color(0xFF94A3B8), fontSize: 11),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${card.cardName} • ${item.category}',
+                                  style: GoogleFonts.workSans(
+                                    color: Colors.white70,
+                                    fontSize: 11,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            AnimatedCounterText(
-                              value: tx.amount,
-                              style: GoogleFonts.outfit(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              AnimatedCounterText(
+                                value: item.amount,
+                                style: GoogleFonts.spaceGrotesk(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                              Text(
+                                Formatters.formatDateShort(item.date).toUpperCase(),
+                                style: GoogleFonts.spaceGrotesk(
+                                  color: Colors.white70,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   );
                 },
               ),
+            ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 4),
+
+            // Footer Row: Ledger link + Square Page Indicator Dots
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'tap to view full cycle ledger →',
+                  style: GoogleFonts.workSans(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                Row(
+                  children: List.generate(widget.items.length > 4 ? 4 : widget.items.length, (i) {
+                    final isCurrent = (i == (_currentIndex % (widget.items.length > 4 ? 4 : widget.items.length)));
+                    return Container(
+                      width: 5,
+                      height: 5,
+                      margin: const EdgeInsets.only(left: 3),
+                      decoration: BoxDecoration(
+                        color: isCurrent ? Colors.white : Colors.white30,
+                        shape: BoxShape.rectangle, // Sharp square dots
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
+
+/// Windows Phone Live Auto-Scrolling Card Tile (Resetting Soon)
+class LiveScrollingCardTile extends StatefulWidget {
+  final List<CreditCard> cards;
+  final List<TransactionItem> transactions;
+  final List<EmiItem> emis;
+  final VoidCallback onTap;
+
+  const LiveScrollingCardTile({
+    super.key,
+    required this.cards,
+    required this.transactions,
+    required this.emis,
+    required this.onTap,
+  });
+
+  @override
+  State<LiveScrollingCardTile> createState() => _LiveScrollingCardTileState();
+}
+
+class _LiveScrollingCardTileState extends State<LiveScrollingCardTile> {
+  late PageController _pageController;
+  Timer? _timer;
+  int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startAutoScroll();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(milliseconds: 3500), (timer) {
+      if (!mounted || widget.cards.isEmpty) return;
+      final nextIndex = (_currentIndex + 1) % widget.cards.length;
+      _pageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 650),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.cards.isEmpty) {
+      return GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: const BoxDecoration(
+            color: Color(0xFFB45309),
+            borderRadius: BorderRadius.zero,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Icon(Icons.credit_card, color: Colors.white, size: 18),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: const BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.zero),
+                    child: Text('0 DAYS', style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text('RESETTING SOON', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text('No Cards', style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: const BoxDecoration(
+          color: Color(0xFFB45309), // Amber / Brown
+          borderRadius: BorderRadius.zero,
+        ),
+        child: PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.vertical, // Downwards vertical live scroll!
+          itemCount: widget.cards.length,
+          onPageChanged: (idx) {
+            setState(() {
+              _currentIndex = idx;
+            });
+          },
+          itemBuilder: (context, index) {
+            final card = widget.cards[index];
+            final cycle = CycleCalculator.getBillingCycle(card);
+            final spend = CycleCalculator.getTotalCycleSpend(card, widget.transactions, widget.emis, cycle: cycle);
+            final available = (card.monthlyLimit - spend).clamp(0.0, double.infinity);
+            final daysLeft = cycle.daysRemaining > 0 ? cycle.daysRemaining : 1;
+            final safeDaily = (available / daysLeft).roundToDouble();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Icon(Icons.credit_card, color: Colors.white, size: 18),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: const BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.zero),
+                      child: Text(
+                        '${cycle.daysRemaining} DAYS',
+                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('RESETTING SOON', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 9, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Text(
+                  '${card.bank} ${card.cardName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  '${Formatters.formatDateShort(cycle.startDate)} - ${Formatters.formatDateShort(cycle.endDate)}',
+                  style: GoogleFonts.workSans(color: Colors.white70, fontSize: 11),
+                ),
+                const Spacer(),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('SAFE VELOCITY', style: GoogleFonts.spaceGrotesk(color: Colors.white70, fontSize: 8, fontWeight: FontWeight.bold)),
+                    AnimatedCounterText(
+                      value: safeDaily,
+                      prefix: '₹',
+                      style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 }
 
 class _PulseLogoPainter extends CustomPainter {
@@ -1015,7 +1071,7 @@ class _PulseLogoPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..shader = LinearGradient(
-        colors: const [Color(0xFF00FFA3), Color(0xFF38BDF8)],
+        colors: const [Color(0xFF0078D7), Color(0xFF008A00), Color(0xFFF09609)],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
       ..strokeWidth = 2.5
       ..style = PaintingStyle.stroke

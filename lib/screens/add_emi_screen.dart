@@ -1,7 +1,12 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/credit_card.dart';
 import '../models/emi.dart';
 import '../utils/formatters.dart';
+import '../widgets/animated_counter_text.dart';
+import '../widgets/animated_progress_bar.dart';
+import '../widgets/metro_tile_flip_entrance.dart';
 
 class AddEmiScreen extends StatefulWidget {
   final List<CreditCard> cards;
@@ -47,7 +52,7 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
             ? widget.cards.first
             : CreditCard(
                 id: 'dummy',
-                cardName: 'HDFC Regalia',
+                cardName: 'Regalia Gold',
                 bank: 'HDFC Bank',
                 last4: '4321',
                 monthlyLimit: 450000,
@@ -176,8 +181,8 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
                 bottom: MediaQuery.of(ctx).padding.bottom + 20,
               ),
               decoration: const BoxDecoration(
-                color: Color(0xFF161F30),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                color: Color(0xFF121212),
+                borderRadius: BorderRadius.zero,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -185,15 +190,15 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.calendar_month, color: Color(0xFF34D399), size: 20),
+                      const Icon(Icons.calendar_month, color: Color(0xFF0078D7), size: 20),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Select First Due Month',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),
                       const Spacer(),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
+                        icon: const Icon(Icons.close_rounded, color: Colors.white70),
                         onPressed: () => Navigator.of(ctx).pop(),
                       ),
                     ],
@@ -213,8 +218,8 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
                       ),
                       Text(
                         '$tempYear',
-                        style: const TextStyle(
-                          color: Color(0xFF34D399),
+                        style: GoogleFonts.spaceGrotesk(
+                          color: const Color(0xFF0078D7),
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -247,21 +252,14 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
                           width: 68,
                           padding: const EdgeInsets.symmetric(vertical: 10),
                           decoration: BoxDecoration(
-                            color: isSelected
-                                ? const Color(0xFF10B981).withValues(alpha: 0.25)
-                                : const Color(0xFF111827),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFF34D399)
-                                  : const Color(0xFF222F46),
-                            ),
+                            color: isSelected ? const Color(0xFF0078D7) : const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.zero,
                           ),
                           child: Text(
                             Formatters.formatMonthLabel(tempYear, monthNum).split('-').first,
                             textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: isSelected ? const Color(0xFF34D399) : Colors.white,
+                            style: GoogleFonts.spaceGrotesk(
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 12,
                             ),
@@ -275,14 +273,15 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
 
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF34D399),
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    height: 46,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0078D7),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                       ),
-                      child: const Text('Select Month', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      child: Text('SELECT MONTH', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 14)),
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         setState(() {
@@ -344,175 +343,386 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
         ? (double.tryParse(_scheduleControllers.first.text) ?? 0.0)
         : 0.0;
 
-    final principalPercent = totalScheduledOutflow > 0
-        ? ((principalSum / totalScheduledOutflow) * 100).round()
-        : 100;
-    final interestPercent = 100 - principalPercent;
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F19),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0B0F19),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Row(
+      backgroundColor: const Color(0xFF121212), // Metro Dark Obsidian
+      body: SafeArea(
+        child: Column(
           children: [
+            // Fixed Top Header Bar
             Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.credit_score,
-                color: Color(0xFF34D399),
-                size: 18,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.initialEmi != null ? 'Edit EMI' : 'Add EMI',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                Row(
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF34D399),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    const Text(
-                      'Offline Encrypted',
-                      style: TextStyle(color: Color(0xFF34D399), fontSize: 10, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          Container(
-            margin: const EdgeInsets.only(right: 16),
-            padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: Color(0xFF34D399),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.person_outline, color: Colors.black, size: 18),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. REALTIME PROJECTION Header & Liability Card
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: const Color(0xFF121212),
+              child: Row(
                 children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.flash_on, color: Color(0xFF34D399), size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        'REALTIME PROJECTION',
-                        style: TextStyle(
-                          color: Color(0xFF34D399),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
+                  const SizedBox(width: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                    width: 28,
+                    height: 28,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0078D7),
+                      borderRadius: BorderRadius.zero,
                     ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.verified_user_outlined, size: 12, color: Color(0xFF34D399)),
-                        SizedBox(width: 4),
-                        Text(
-                          'Zero-Cloud',
-                          style: TextStyle(
-                            color: Color(0xFF34D399),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    child: const Center(
+                      child: Icon(Icons.calendar_month, color: Colors.white, size: 16),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.initialEmi != null ? 'EDIT EMI' : 'ADD EMI',
+                    style: GoogleFonts.spaceGrotesk(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ],
               ),
+            ),
 
-              const SizedBox(height: 4),
-              Text(
-                widget.initialEmi != null ? 'Edit EMI Schedule' : 'Plan Liabilities',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Liability Projection Summary Card
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161F30),
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFF222F46)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Total Scheduled Outflow',
-                              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
-                            ),
-                            const SizedBox(height: 4),
-                            RichText(
-                              text: TextSpan(
+            // Scrollable Form Body
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Liability Projection Summary Card (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0078D7), // Solid Metro Blue
+                            borderRadius: BorderRadius.zero,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  TextSpan(
-                                    text: Formatters.formatCurrency(totalScheduledOutflow),
-                                    style: const TextStyle(
-                                      color: Color(0xFF34D399),
-                                      fontSize: 22,
+                                  Text(
+                                    'TOTAL SCHEDULED OUTFLOW',
+                                    style: GoogleFonts.spaceGrotesk(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.zero,
+                                    ),
+                                    child: Text(
+                                      _type == EmiType.self ? 'SELF' : 'OTHERS',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        color: const Color(0xFF0078D7),
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  AnimatedCounterText(
+                                    value: totalScheduledOutflow,
+                                    delayMs: 180,
+                                    style: GoogleFonts.spaceGrotesk(
+                                      color: Colors.white,
+                                      fontSize: 26,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
-                                  TextSpan(
-                                    text: ' across $_tenureMonths mos',
-                                    style: const TextStyle(
-                                      color: Color(0xFF9CA3AF),
-                                      fontSize: 12,
+                                  Text(
+                                    ' across $_tenureMonths mos',
+                                    style: GoogleFonts.workSans(color: Colors.white70, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Principal Sum', style: GoogleFonts.workSans(color: Colors.white70, fontSize: 10)),
+                                      AnimatedCounterText(
+                                        value: principalSum,
+                                        delayMs: 180,
+                                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Total Interest', style: GoogleFonts.workSans(color: Colors.white70, fontSize: 10)),
+                                      AnimatedCounterText(
+                                        value: totalInterest,
+                                        delayMs: 180,
+                                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text('1st Installment', style: GoogleFonts.workSans(color: Colors.white70, fontSize: 10)),
+                                      AnimatedCounterText(
+                                        value: firstInstallment,
+                                        delayMs: 180,
+                                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Beneficiary Attribution (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 80,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Beneficiary Attribution', style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _type = EmiType.self),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: _type == EmiType.self ? const Color(0xFF008A00) : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.person_outline, size: 16, color: Colors.white),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Self (Personal)',
+                                            style: GoogleFonts.spaceGrotesk(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: GestureDetector(
+                                    onTap: () => setState(() => _type = EmiType.others),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: _type == EmiType.others ? const Color(0xFFF09609) : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          const Icon(Icons.group_outlined, size: 16, color: Colors.white),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            'Others (Peer / Family)',
+                                            style: GoogleFonts.spaceGrotesk(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      if (_type == EmiType.others) ...[
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _beneficiaryController,
+                          style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
+                          decoration: const InputDecoration(
+                            labelText: 'Person / Beneficiary Name',
+                            hintText: 'e.g. Rahul / Dad / Friend',
+                            prefixIcon: Icon(Icons.person_pin_outlined, color: Color(0xFFF09609)),
+                            filled: true,
+                            fillColor: Color(0xFF1E1E1E),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Color(0xFF2D2D2D))),
+                          ),
+                        ),
+                      ],
+
+                      const SizedBox(height: 12),
+
+                      // Linked Credit Card (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 160,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Linked Credit Card', style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.zero,
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<CreditCard>(
+                                  value: _selectedCard,
+                                  isExpanded: true,
+                                  dropdownColor: const Color(0xFF1E1E1E),
+                                  icon: const Icon(Icons.credit_card, color: Color(0xFF0078D7)),
+                                  items: widget.cards.map((card) {
+                                    return DropdownMenuItem(
+                                      value: card,
+                                      child: Text(
+                                        '${card.bank} ${card.cardName} •••• ${card.last4}',
+                                        style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) setState(() => _selectedCard = val);
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Item Title & Principal Amount Row (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 240,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Item / Purpose of Spend', style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.w600)),
+                            const SizedBox(height: 6),
+                            TextFormField(
+                              controller: _titleController,
+                              style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
+                              decoration: const InputDecoration(
+                                hintText: "e.g. Sony Bravia 55' OLED TV",
+                                prefixIcon: Icon(Icons.shopping_bag_outlined, color: Color(0xFF0078D7)),
+                                filled: true,
+                                fillColor: Color(0xFF1E1E1E),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Color(0xFF2D2D2D))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Color(0xFF2D2D2D))),
+                              ),
+                              validator: (val) => val == null || val.trim().isEmpty ? 'Enter purchase item title' : null,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+
+                      // Principal Amount & First Due Month (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 300,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Total Principal Amount', style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 6),
+                                  SizedBox(
+                                    height: 48,
+                                    child: TextFormField(
+                                      controller: _principalController,
+                                      keyboardType: TextInputType.number,
+                                      style: GoogleFonts.spaceGrotesk(color: const Color(0xFF0078D7), fontSize: 18, fontWeight: FontWeight.bold),
+                                      decoration: const InputDecoration(
+                                        prefixText: '₹ ',
+                                        prefixStyle: TextStyle(color: Color(0xFF0078D7), fontSize: 18, fontWeight: FontWeight.bold),
+                                        filled: true,
+                                        fillColor: Color(0xFF1E1E1E),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                        border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Color(0xFF2D2D2D))),
+                                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Color(0xFF2D2D2D))),
+                                      ),
+                                      onChanged: (_) {
+                                        setState(() {
+                                          _generateSchedule();
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('First Due Month', style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 6),
+                                  SizedBox(
+                                    height: 48,
+                                    child: InkWell(
+                                      onTap: _pickFirstDueMonth,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF1E1E1E),
+                                          borderRadius: BorderRadius.zero,
+                                          border: Border.all(color: const Color(0xFF2D2D2D)),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              '${_getMonthName(_startMonth)}, $_startYear',
+                                              style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                            const Icon(Icons.calendar_month_outlined, color: Color(0xFF0078D7), size: 16),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -520,655 +730,195 @@ class _AddEmiScreenState extends State<AddEmiScreen> {
                             ),
                           ],
                         ),
-
-                        // Self-Financed or Peer/Family Tag
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF111827),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF222F46)),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                _type == EmiType.self ? Icons.person_outline : Icons.group_outlined,
-                                size: 14,
-                                color: const Color(0xFF34D399),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                _type == EmiType.self ? 'Self-Financed' : 'Peer / Family',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 16),
-                    const Divider(color: Color(0xFF222F46), height: 1),
-                    const SizedBox(height: 12),
-
-                    // 3-Column Metrics: Principal Sum | Total Interest | 1st Installment
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Principal Sum',
-                              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 10),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              Formatters.formatCurrency(principalSum),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Total Interest',
-                              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 10),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              Formatters.formatCurrency(totalInterest),
-                              style: const TextStyle(
-                                color: Color(0xFFFBBF24),
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '1st Installment',
-                              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 10),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              Formatters.formatCurrency(firstInstallment),
-                              style: const TextStyle(
-                                color: Color(0xFF34D399),
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // 2. Beneficiary Attribution (Self vs Others)
-              const Row(
-                children: [
-                  Text(
-                    'Beneficiary Attribution',
-                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(Icons.help_outline, color: Color(0xFF9CA3AF), size: 14),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _type = EmiType.self),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _type == EmiType.self
-                              ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                              : const Color(0xFF161F30),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _type == EmiType.self
-                                ? const Color(0xFF34D399)
-                                : const Color(0xFF222F46),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 16,
-                              color: _type == EmiType.self ? const Color(0xFF34D399) : Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Self (Personal)',
-                              style: TextStyle(
-                                color: _type == EmiType.self ? const Color(0xFF34D399) : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setState(() => _type = EmiType.others),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: _type == EmiType.others
-                              ? const Color(0xFFF59E0B).withValues(alpha: 0.15)
-                              : const Color(0xFF161F30),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _type == EmiType.others
-                                ? const Color(0xFFFBBF24)
-                                : const Color(0xFF222F46),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+
+                      const SizedBox(height: 12),
+
+                      // Quick Tenures (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 360,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.group_outlined,
-                              size: 16,
-                              color: _type == EmiType.others ? const Color(0xFFFBBF24) : Colors.white,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Others (Peer / Family)',
-                              style: TextStyle(
-                                color: _type == EmiType.others ? const Color(0xFFFBBF24) : Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (_type == EmiType.others) ...[
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _beneficiaryController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Person / Beneficiary Name',
-                    hintText: 'e.g. Rahul / Dad / Friend',
-                    prefixIcon: const Icon(Icons.person_pin, color: Color(0xFFFBBF24)),
-                    filled: true,
-                    fillColor: const Color(0xFF161F30),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF222F46)),
-                    ),
-                  ),
-                ),
-              ],
-
-              const SizedBox(height: 16),
-
-              // 3. Linked Credit Card
-              const Text(
-                'Linked Credit Card',
-                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 6),
-
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161F30),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF222F46)),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<CreditCard>(
-                    value: _selectedCard,
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF161F30),
-                    icon: const Icon(Icons.credit_card, color: Color(0xFF9CA3AF)),
-                    items: widget.cards.map((card) {
-                      final limitInLakhs = (card.monthlyLimit / 100000).toStringAsFixed(1);
-                      return DropdownMenuItem(
-                        value: card,
-                        child: Text(
-                          '${card.bank} ${card.cardName} •••• ${card.last4} (Limit: ₹${limitInLakhs}L)',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _selectedCard = val);
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 4. Item / Purpose of Spend
-              const Text(
-                'Item / Purpose of Spend',
-                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 6),
-
-              TextFormField(
-                controller: _titleController,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: "e.g. Sony Bravia 55' OLED TV",
-                  prefixIcon: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF9CA3AF)),
-                  filled: true,
-                  fillColor: const Color(0xFF161F30),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF222F46)),
-                  ),
-                ),
-                validator: (val) =>
-                    val == null || val.trim().isEmpty ? 'Enter purchase item title' : null,
-              ),
-
-              const SizedBox(height: 16),
-
-              // 5. Total Principal Amount & First Due Month Row
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Total Principal Amount',
-                          style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 6),
-                        TextFormField(
-                          controller: _principalController,
-                          keyboardType: TextInputType.number,
-                          style: const TextStyle(color: Color(0xFF34D399), fontSize: 20, fontWeight: FontWeight.bold),
-                          decoration: InputDecoration(
-                            prefixText: '₹ ',
-                            prefixStyle: const TextStyle(color: Color(0xFF34D399), fontSize: 20, fontWeight: FontWeight.bold),
-                            filled: true,
-                            fillColor: const Color(0xFF161F30),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFF222F46)),
-                            ),
-                          ),
-                          onChanged: (_) {
-                            setState(() {
-                              _generateSchedule();
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'First Due Month',
-                          style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                        const SizedBox(height: 6),
-                        InkWell(
-                          onTap: _pickFirstDueMonth,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF161F30),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF34D399), width: 1.2),
-                            ),
-                            child: Row(
+                            Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  '${_getMonthName(_startMonth)}, $_startYear',
-                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                const Icon(Icons.calendar_month, color: Color(0xFF34D399), size: 18),
+                                Text('Repayment Tenure Count', style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.w600)),
+                                Text('$_tenureMonths Months', style: GoogleFonts.spaceGrotesk(color: const Color(0xFF0078D7), fontWeight: FontWeight.bold, fontSize: 12)),
                               ],
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // 6. Repayment Tenure Count
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Repayment Tenure Count',
-                    style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    '$_tenureMonths Months',
-                    style: const TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                children: _quickTenures.map((m) {
-                  final isSelected = m == _tenureMonths;
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _tenureMonths = m;
-                          _generateSchedule();
-                        });
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                              : const Color(0xFF161F30),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: isSelected ? const Color(0xFF34D399) : const Color(0xFF222F46),
-                          ),
-                        ),
-                        child: Text(
-                          '${m}M',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: isSelected ? const Color(0xFF34D399) : const Color(0xFF9CA3AF),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: _quickTenures.map((m) {
+                                final isSelected = m == _tenureMonths;
+                                return Expanded(
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _tenureMonths = m;
+                                        _generateSchedule();
+                                      });
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? const Color(0xFF0078D7) : const Color(0xFF1E1E1E),
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      child: Text(
+                                        '${m}M',
+                                        textAlign: TextAlign.center,
+                                        style: GoogleFonts.spaceGrotesk(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
 
-              const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
-              // 7. Month-by-Month Installment Schedule Table
-              const Row(
-                children: [
-                  Icon(Icons.table_chart_outlined, color: Color(0xFF34D399), size: 18),
-                  SizedBox(width: 8),
-                  Text(
-                    'Month-by-Month Installment Schedule',
-                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              const Text(
-                'Edit exact monthly debit amounts',
-                style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
-              ),
-
-              const SizedBox(height: 10),
-
-              // Table Container
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF161F30),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF222F46)),
-                ),
-                child: Column(
-                  children: [
-                    // Header Row
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF111827),
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                      ),
-                      child: const Row(
-                        children: [
-                          SizedBox(width: 20, child: Text('#', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.bold))),
-                          SizedBox(width: 70, child: Text('Month', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.bold))),
-                          Expanded(child: Text('EMI Amount (₹)', textAlign: TextAlign.center, style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.bold))),
-                          SizedBox(width: 60, child: Text('Status', textAlign: TextAlign.right, style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.bold))),
-                        ],
-                      ),
-                    ),
-
-                    // Table Rows
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _scheduleItems.length,
-                      itemBuilder: (context, index) {
-                        final item = _scheduleItems[index];
-                        final controller = _scheduleControllers[index];
-                        final isFirstDue = index == 0;
-
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      // Month-by-Month Installment Schedule Table
+                      MetroTileFlipEntrance(
+                        delayMs: 420,
+                        child: Container(
                           decoration: const BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Color(0xFF222F46), width: 0.5)),
+                            color: Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.zero,
                           ),
-                          child: Row(
+                          child: Column(
                             children: [
-                              SizedBox(
-                                width: 20,
-                                child: Text('${item.installmentNumber}', style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.bold)),
-                              ),
-                              SizedBox(
-                                width: 70,
-                                child: Text(item.monthLabel, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                                  child: TextField(
-                                    controller: controller,
-                                    keyboardType: TextInputType.number,
-                                    style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 14),
-                                    decoration: InputDecoration(
-                                      prefixText: '₹ ',
-                                      prefixStyle: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.bold, fontSize: 14),
-                                      isDense: true,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                      filled: true,
-                                      fillColor: const Color(0xFF0F172A),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(color: Color(0xFF222F46)),
-                                      ),
-                                    ),
-                                  ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                color: const Color(0xFF262626),
+                                child: Row(
+                                  children: [
+                                    SizedBox(width: 20, child: Text('#', style: GoogleFonts.spaceGrotesk(color: const Color(0xFFA0A0A0), fontSize: 10, fontWeight: FontWeight.bold))),
+                                    SizedBox(width: 70, child: Text('Month', style: GoogleFonts.spaceGrotesk(color: const Color(0xFFA0A0A0), fontSize: 10, fontWeight: FontWeight.bold))),
+                                    Expanded(child: Text('EMI Amount (₹)', textAlign: TextAlign.center, style: GoogleFonts.spaceGrotesk(color: const Color(0xFFA0A0A0), fontSize: 10, fontWeight: FontWeight.bold))),
+                                    SizedBox(width: 60, child: Text('Status', textAlign: TextAlign.right, style: GoogleFonts.spaceGrotesk(color: const Color(0xFFA0A0A0), fontSize: 10, fontWeight: FontWeight.bold))),
+                                  ],
                                 ),
                               ),
-                              SizedBox(
-                                width: 75,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      item.isPaid = !item.isPaid;
-                                    });
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: item.isPaid
-                                          ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                                          : const Color(0xFFF59E0B).withValues(alpha: 0.2),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: item.isPaid ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
-                                      ),
+
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _scheduleItems.length,
+                                itemBuilder: (context, index) {
+                                  final item = _scheduleItems[index];
+                                  final controller = _scheduleControllers[index];
+
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: const BoxDecoration(
+                                      border: Border(bottom: BorderSide(color: Color(0xFF2D2D2D), width: 0.5)),
                                     ),
-                                    child: Text(
-                                      item.isPaid ? 'Paid' : 'Due',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        color: item.isPaid ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                    child: Row(
+                                      children: [
+                                        SizedBox(
+                                          width: 20,
+                                          child: Text('${item.installmentNumber}', style: GoogleFonts.spaceGrotesk(color: const Color(0xFFA0A0A0), fontSize: 11, fontWeight: FontWeight.bold)),
+                                        ),
+                                        SizedBox(
+                                          width: 70,
+                                          child: Text(item.monthLabel, style: GoogleFonts.spaceGrotesk(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        ),
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            child: TextField(
+                                              controller: controller,
+                                              keyboardType: TextInputType.number,
+                                              style: GoogleFonts.spaceGrotesk(color: const Color(0xFF0078D7), fontWeight: FontWeight.bold, fontSize: 13),
+                                              decoration: const InputDecoration(
+                                                prefixText: '₹ ',
+                                                prefixStyle: TextStyle(color: Color(0xFF0078D7), fontWeight: FontWeight.bold, fontSize: 13),
+                                                isDense: true,
+                                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                                filled: true,
+                                                fillColor: Color(0xFF121212),
+                                                border: OutlineInputBorder(borderRadius: BorderRadius.zero, borderSide: BorderSide(color: Color(0xFF2D2D2D))),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(
+                                          width: 60,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                item.isPaid = !item.isPaid;
+                                              });
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: item.isPaid ? const Color(0x26008A00) : const Color(0x26F09609),
+                                                borderRadius: BorderRadius.zero,
+                                              ),
+                                              child: Text(
+                                                item.isPaid ? 'PAID' : 'DUE',
+                                                textAlign: TextAlign.center,
+                                                style: GoogleFonts.spaceGrotesk(
+                                                  color: item.isPaid ? const Color(0xFF008A00) : const Color(0xFFF09609),
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ),
+                                  );
+                                },
                               ),
                             ],
                           ),
-                        );
-                      },
-                    ),
-
-                    // Total Sum Row
-                    Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Total Sum of Scheduled EMIs:',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
-                          Text(
-                            Formatters.formatCurrency(totalScheduledOutflow),
-                            style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.w800, fontSize: 16),
-                          ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
 
-              const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-              // 8. COST DISTRIBUTION Progress Bar
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Row(
-                    children: [
-                      Icon(Icons.pie_chart_outline, color: Color(0xFF9CA3AF), size: 14),
-                      SizedBox(width: 4),
-                      Text(
-                        'COST DISTRIBUTION',
-                        style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontWeight: FontWeight.bold),
+                      // Save Button (Metro Flip)
+                      MetroTileFlipEntrance(
+                        delayMs: 480,
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 46,
+                          child: ElevatedButton.icon(
+                            onPressed: _submit,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0078D7),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            label: Text(
+                              widget.initialEmi != null ? 'UPDATE EMI SCHEDULE' : 'SAVE EMI SCHEDULE',
+                              style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.8),
+                            ),
+                          ),
+                        ),
                       ),
+
+                      const SizedBox(height: 30),
                     ],
                   ),
-                  Text(
-                    '$principalPercent% Principal / $interestPercent% Int.',
-                    style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: principalPercent > 0 ? principalPercent : 1,
-                      child: Container(height: 6, color: const Color(0xFF34D399)),
-                    ),
-                    Expanded(
-                      flex: interestPercent > 0 ? interestPercent : 1,
-                      child: Container(height: 6, color: const Color(0xFFFBBF24)),
-                    ),
-                  ],
                 ),
               ),
-
-              const SizedBox(height: 24),
-
-              // 9. Save Button & Encrypted Footer
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: FilledButton.icon(
-                  onPressed: _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF34D399),
-                    foregroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  icon: const Icon(Icons.calendar_month, size: 18),
-                  label: Text(
-                    widget.initialEmi != null ? 'Update EMI Schedule' : 'Save EMI & Generate Schedule',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              const Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.lock_outline, color: Color(0xFF9CA3AF), size: 12),
-                    SizedBox(width: 4),
-                    Text(
-                      'Encrypted offline in local device SQLite enclave',
-                      style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

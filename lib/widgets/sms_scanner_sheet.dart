@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/credit_card.dart';
 import '../models/transaction.dart';
 import '../services/sms_service.dart';
 import '../services/storage_service.dart';
 import '../utils/formatters.dart';
+import '../widgets/animated_counter_text.dart';
+import '../widgets/metro_tile_flip_entrance.dart';
 
 class SmsScannerSheet extends StatefulWidget {
   final StorageService? storageService;
@@ -77,7 +80,7 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
       } else if (isDeleted) {
         deleted.add(i);
       } else {
-        selected.add(i); // Auto-select NEW transactions only!
+        selected.add(i);
       }
     }
 
@@ -115,33 +118,20 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
+      height: MediaQuery.of(context).size.height * 0.80,
       padding: EdgeInsets.only(
-        top: 20,
-        left: 20,
-        right: 20,
-        bottom: MediaQuery.of(context).padding.bottom + 20,
+        top: 16,
+        left: 16,
+        right: 16,
+        bottom: MediaQuery.of(context).padding.bottom + 16,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFF161F30),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: Color(0xFF121212), // Metro Obsidian Background
+        borderRadius: BorderRadius.zero, // Windows Phone Sharp Edge
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF222F46),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
           // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -149,52 +139,50 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.all(6),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0078D7), // Solid Metro Blue
+                      borderRadius: BorderRadius.zero,
                     ),
-                    child: const Icon(
-                      Icons.sms_outlined,
-                      color: Color(0xFF34D399),
-                    ),
+                    child: const Icon(Icons.sync, color: Colors.white, size: 18),
                   ),
-                  const SizedBox(width: 12),
-                  const Text(
-                    'Fetch Spends from SMS',
-                    style: TextStyle(
+                  const SizedBox(width: 10),
+                  Text(
+                    'FETCH SPENDS FROM SMS',
+                    style: GoogleFonts.spaceGrotesk(
                       color: Colors.white,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: Colors.white70),
+                icon: const Icon(Icons.close_rounded, color: Colors.white70, size: 20),
                 onPressed: () => Navigator.of(context).pop(),
               ),
             ],
           ),
 
           const SizedBox(height: 4),
-          const Text(
-            'Scans bank SMS offline. Existing transactions are automatically deduplicated.',
-            style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+          Text(
+            'Scans bank SMS inbox offline on-device. Deduplicates existing spends.',
+            style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Content State
           Expanded(
             child: _isLoading
-                ? const Center(
+                ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircularProgressIndicator(color: Color(0xFF34D399)),
-                        SizedBox(height: 16),
-                        Text('Scanning SMS inbox offline...', style: TextStyle(color: Colors.white)),
+                        const CircularProgressIndicator(color: Color(0xFF0078D7)),
+                        const SizedBox(height: 16),
+                        Text('Scanning SMS inbox offline on-device...', style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   )
@@ -203,26 +191,28 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.mark_chat_read, size: 48, color: Color(0xFF34D399)),
+                            const Icon(Icons.mark_chat_read_outlined, size: 48, color: Color(0xFF008A00)),
                             const SizedBox(height: 12),
-                            const Text(
+                            Text(
                               'No New Spends Found in SMS',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                             ),
                             const SizedBox(height: 6),
-                            const Text(
+                            Text(
                               'All financial SMS debits in active cycle are already synced.',
-                              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+                              style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 12),
                             ),
                             const SizedBox(height: 16),
-                            OutlinedButton.icon(
+                            ElevatedButton.icon(
                               onPressed: _scan,
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFF222F46)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0078D7),
                                 foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                               ),
-                              icon: const Icon(Icons.refresh, color: Color(0xFF34D399)),
-                              label: const Text('Retry Scan'),
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: Text('RETRY SCAN', style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold)),
                             ),
                           ],
                         ),
@@ -235,10 +225,10 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
                             children: [
                               Text(
                                 '${_parsedList.length} Detected (${_selectedIndices.length} New)',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
                               ),
-                              TextButton(
-                                onPressed: () {
+                              GestureDetector(
+                                onTap: () {
                                   final totalDisabled = _syncedIndices.length + _deletedIndices.length;
                                   setState(() {
                                     if (_selectedIndices.length == _parsedList.length - totalDisabled) {
@@ -253,14 +243,14 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
                                 },
                                 child: Text(
                                   _selectedIndices.length == _parsedList.length - (_syncedIndices.length + _deletedIndices.length)
-                                      ? 'Deselect All'
-                                      : 'Select New',
-                                  style: const TextStyle(color: Color(0xFF34D399)),
+                                      ? 'DESELECT ALL'
+                                      : 'SELECT NEW',
+                                  style: GoogleFonts.spaceGrotesk(color: const Color(0xFF0078D7), fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 10),
                           Expanded(
                             child: ListView.builder(
                               itemCount: _parsedList.length,
@@ -276,93 +266,85 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
                                   orElse: () => widget.cards.first,
                                 );
 
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF111827),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isDisabled
-                                          ? const Color(0xFF222F46)
-                                          : (isSelected ? const Color(0xFF34D399) : const Color(0xFF222F46)),
+                                return MetroTileFlipEntrance(
+                                  delayMs: index * 60,
+                                  child: Container(
+                                    margin: const EdgeInsets.only(bottom: 8),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1E1E1E), // Metro Solid Tile
+                                      borderRadius: BorderRadius.zero,
                                     ),
-                                  ),
-                                  child: CheckboxListTile(
-                                    value: isSelected,
-                                    activeColor: const Color(0xFF34D399),
-                                    checkColor: Colors.black,
-                                    onChanged: isDisabled
-                                        ? null
-                                        : (val) {
-                                            setState(() {
-                                              if (val == true) {
-                                                _selectedIndices.add(index);
-                                              } else {
-                                                _selectedIndices.remove(index);
-                                              }
-                                            });
-                                          },
-                                    title: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            item.merchant,
-                                            style: TextStyle(
-                                              color: isDisabled ? const Color(0xFF9CA3AF) : Colors.white,
+                                    child: CheckboxListTile(
+                                      value: isSelected,
+                                      activeColor: const Color(0xFF0078D7),
+                                      checkColor: Colors.white,
+                                      onChanged: isDisabled
+                                          ? null
+                                          : (val) {
+                                              setState(() {
+                                                if (val == true) {
+                                                  _selectedIndices.add(index);
+                                                } else {
+                                                  _selectedIndices.remove(index);
+                                                }
+                                              });
+                                            },
+                                      title: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              item.merchant,
+                                              style: GoogleFonts.spaceGrotesk(
+                                                color: isDisabled ? const Color(0xFFA0A0A0) : Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ),
+                                          AnimatedCounterText(
+                                            value: item.amount,
+                                            delayMs: (index * 60) + 120,
+                                            style: GoogleFonts.spaceGrotesk(
                                               fontWeight: FontWeight.bold,
+                                              color: isDisabled ? const Color(0xFFA0A0A0) : const Color(0xFF0078D7),
                                             ),
                                           ),
-                                        ),
-                                        Text(
-                                          Formatters.formatCurrency(item.amount),
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: isDisabled ? const Color(0xFF9CA3AF) : const Color(0xFF34D399),
+                                        ],
+                                      ),
+                                      subtitle: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            '${card.cardName} (••${card.last4}) • ${Formatters.formatDateShort(item.date)}',
+                                            style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 11),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    subtitle: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          '${card.cardName} (••${card.last4}) • ${Formatters.formatDateShort(item.date)}',
-                                          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11),
-                                        ),
-                                        if (isSynced)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF374151),
-                                              borderRadius: BorderRadius.circular(6),
+                                          if (isSynced)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: const BoxDecoration(
+                                                color: Color(0xFF262626),
+                                                borderRadius: BorderRadius.zero,
+                                              ),
+                                              child: Text(
+                                                'SYNCED',
+                                                style: GoogleFonts.spaceGrotesk(color: const Color(0xFFA0A0A0), fontSize: 9, fontWeight: FontWeight.bold),
+                                              ),
+                                            )
+                                          else if (isDeleted)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: const BoxDecoration(
+                                                color: Color(0x26B91C1C),
+                                                borderRadius: BorderRadius.zero,
+                                              ),
+                                              child: Text(
+                                                'DELETED',
+                                                style: GoogleFonts.spaceGrotesk(color: const Color(0xFFB91C1C), fontSize: 9, fontWeight: FontWeight.bold),
+                                              ),
                                             ),
-                                            child: const Text(
-                                              'Already Synced',
-                                              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 10, fontWeight: FontWeight.bold),
-                                            ),
-                                          )
-                                        else if (isDeleted)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFEF4444).withValues(alpha: 0.2),
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.4)),
-                                            ),
-                                            child: const Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(Icons.delete_outline, color: Color(0xFFF87171), size: 10),
-                                                SizedBox(width: 2),
-                                                Text(
-                                                  'Deleted',
-                                                  style: TextStyle(color: Color(0xFFF87171), fontSize: 10, fontWeight: FontWeight.bold),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 );
@@ -376,21 +358,25 @@ class _SmsScannerSheetState extends State<SmsScannerSheet> {
           const SizedBox(height: 12),
 
           if (!_isLoading && _parsedList.isNotEmpty)
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton.icon(
-                onPressed: _selectedIndices.isEmpty ? null : _importSelected,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF34D399),
-                  foregroundColor: Colors.black,
-                  disabledBackgroundColor: const Color(0xFF222F46),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                icon: const Icon(Icons.download),
-                label: Text(
-                  'Import ${_selectedIndices.length} New Transactions',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+            MetroTileFlipEntrance(
+              delayMs: 300,
+              child: SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: _selectedIndices.isEmpty ? null : _importSelected,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0078D7),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: const Color(0xFF262626),
+                    elevation: 0,
+                    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                  ),
+                  icon: const Icon(Icons.download, size: 18),
+                  label: Text(
+                    'IMPORT ${_selectedIndices.length} NEW TRANSACTIONS',
+                    style: GoogleFonts.spaceGrotesk(fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                  ),
                 ),
               ),
             ),

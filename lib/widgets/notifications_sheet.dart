@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/credit_card.dart';
 import '../models/emi.dart';
 import '../models/transaction.dart';
@@ -12,6 +14,7 @@ class AppNotificationItem {
   final String subtitle;
   final IconData icon;
   final Color iconColor;
+  final Color badgeBg;
   final DateTime timestamp;
 
   AppNotificationItem({
@@ -20,6 +23,7 @@ class AppNotificationItem {
     required this.subtitle,
     required this.icon,
     required this.iconColor,
+    required this.badgeBg,
     required this.timestamp,
   });
 }
@@ -31,6 +35,7 @@ class NotificationsHelper {
     required List<EmiItem> emis,
     List<String> dismissedIds = const [],
     double thresholdPercent = 80.0,
+    bool enableCycleResetAlert = true,
   }) {
     final List<AppNotificationItem> notifications = [];
     final now = DateTime.now();
@@ -48,8 +53,9 @@ class NotificationsHelper {
             id: id,
             title: '${card.bank} ${card.cardName}: Limit Exceeded!',
             subtitle: 'Spent ${Formatters.formatCurrency(totalSpend)} of ${Formatters.formatCurrency(card.monthlyLimit)} limit (${percentVal.toStringAsFixed(0)}% utilized).',
-            icon: Icons.error_outline,
-            iconColor: Colors.redAccent,
+            icon: Icons.error_outline_rounded,
+            iconColor: Colors.white,
+            badgeBg: const Color(0xFFB91C1C), // Solid Red
             timestamp: now,
           ));
         }
@@ -61,14 +67,15 @@ class NotificationsHelper {
             title: '${card.bank} ${card.cardName}: Spend Limit Alert',
             subtitle: 'Spent ${Formatters.formatCurrency(totalSpend)} (${percentVal.toStringAsFixed(0)}% of ${Formatters.formatCurrency(card.monthlyLimit)} threshold).',
             icon: Icons.warning_amber_rounded,
-            iconColor: const Color(0xFFFBBF24),
+            iconColor: Colors.white,
+            badgeBg: const Color(0xFFB45309), // Solid Amber
             timestamp: now,
           ));
         }
       }
 
       // 2. Cycle Reset / Bill Generation Alert
-      if (cycle.daysRemaining <= 5) {
+      if (enableCycleResetAlert && cycle.daysRemaining <= 5) {
         final id = 'reset_alert_${card.id}';
         if (!dismissedIds.contains(id)) {
           notifications.add(AppNotificationItem(
@@ -76,14 +83,15 @@ class NotificationsHelper {
             title: '${card.bank} ${card.cardName}: Bill Statement Reset',
             subtitle: 'Statement generates in ${cycle.daysRemaining} days on ${Formatters.formatDateShort(cycle.nextResetDate)}.',
             icon: Icons.calendar_month_outlined,
-            iconColor: const Color(0xFF38BDF8),
+            iconColor: Colors.white,
+            badgeBg: const Color(0xFF0078D7), // Solid Metro Blue
             timestamp: now,
           ));
         }
       }
     }
 
-    // 3. EMI Alerts (Triggers for all active EMIs, whether Paid or Due)
+    // 3. EMI Alerts
     for (final emi in emis) {
       final currentMonthAmt = emi.getAmountForDate(now);
       if (currentMonthAmt > 0) {
@@ -106,8 +114,9 @@ class NotificationsHelper {
                 ? 'Reimbursement ${isPaid ? "Collected" : "Pending"} from $beneficiaryStr'
                 : 'EMI Installment ${isPaid ? "Paid" : "Due"} for "${emi.title}"',
             subtitle: '${Formatters.formatCurrency(currentMonthAmt)} ${isPaid ? "paid" : "due"} for "${emi.title}" this cycle (${isPaid ? "Paid" : "Unpaid"}).',
-            icon: isPaid ? Icons.check_circle_outline : Icons.person_pin_outlined,
-            iconColor: isPaid ? const Color(0xFF34D399) : const Color(0xFFFBBF24),
+            icon: isPaid ? Icons.check_circle_outline : Icons.schedule_outlined,
+            iconColor: Colors.white,
+            badgeBg: isPaid ? const Color(0xFF008A00) : const Color(0xFF0078D7), // Metro Green vs Blue
             timestamp: now,
           ));
         }
@@ -123,17 +132,22 @@ class NotificationsHelper {
     required List<CreditCard> cards,
     required List<TransactionItem> transactions,
     required List<EmiItem> emis,
-    double thresholdPercent = 80.0,
+    double? thresholdPercent,
+    bool? enableCycleResetAlert,
   }) async {
     final initialDismissed = storageService != null
         ? await storageService.getDismissedNotifications()
         : <String>[];
     final localDismissed = Set<String>.from(initialDismissed);
 
+    double activeThreshold = thresholdPercent ?? (storageService != null ? await storageService.getAlertThreshold() : 80.0);
+    bool activeResetAlert = enableCycleResetAlert ?? (storageService != null ? await storageService.getCycleResetAlert() : true);
+
     if (!context.mounted) return;
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
@@ -143,172 +157,272 @@ class NotificationsHelper {
             transactions: transactions,
             emis: emis,
             dismissedIds: localDismissed.toList(),
-            thresholdPercent: thresholdPercent,
+            thresholdPercent: activeThreshold,
+            enableCycleResetAlert: activeResetAlert,
           );
 
           return Container(
             padding: EdgeInsets.only(
-              top: 20,
-              left: 20,
-              right: 20,
-              bottom: MediaQuery.of(ctx).padding.bottom + 20,
+              top: 14,
+              left: 16,
+              right: 16,
+              bottom: MediaQuery.of(ctx).padding.bottom + 16,
             ),
             decoration: const BoxDecoration(
-              color: Color(0xFF161F30),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              color: Color(0xFF121212), // Metro Obsidian Background
+              borderRadius: BorderRadius.zero, // Windows Phone Sharp Edge
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Drag Handle
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF222F46),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Fixed Metro Top Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF0078D7), // Solid Metro Blue
+                            borderRadius: BorderRadius.zero,
+                          ),
+                          child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 18),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'NOTIFICATIONS & ALERTS',
+                          style: GoogleFonts.spaceGrotesk(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF262626),
+                            borderRadius: BorderRadius.zero,
+                          ),
+                          child: Text(
+                            '${notifications.length}',
+                            style: GoogleFonts.spaceGrotesk(
+                              color: const Color(0xFF0078D7),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.notifications_outlined, color: Color(0xFF34D399), size: 22),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Notifications & Alerts',
-                            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              '${notifications.length}',
-                              style: const TextStyle(color: Color(0xFF34D399), fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          if (notifications.isNotEmpty)
-                            TextButton(
-                              onPressed: () async {
-                                final idsToClear = notifications.map((n) => n.id).toList();
-                                setSheetState(() {
-                                  localDismissed.addAll(idsToClear);
-                                });
-                                await storageService?.clearAllNotifications(idsToClear);
-                              },
-                              child: const Text(
-                                'Clear All',
-                                style: TextStyle(color: Colors.redAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white70),
-                            onPressed: () => Navigator.of(ctx).pop(),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                const SizedBox(height: 14),
 
-                  const SizedBox(height: 14),
-
-                  if (notifications.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.check_circle_outline, color: Color(0xFF34D399), size: 36),
-                          SizedBox(height: 8),
-                          Text('No Active Notifications', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 4),
-                          Text('All alerts cleared or card budgets healthy.', style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
-                        ],
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: notifications.length,
-                      itemBuilder: (context, index) {
-                        final item = notifications[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0F172A),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: const Color(0xFF222F46)),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: item.iconColor.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(10),
+                // Scrollable Notifications List Under Fixed Header
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: notifications.isEmpty
+                        ? Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(Icons.check_circle_outline_rounded, color: Color(0xFF008A00), size: 36),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'No Active Notifications',
+                                  style: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
-                                child: Icon(item.icon, color: item.iconColor, size: 20),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'All alerts cleared or card budgets healthy.',
+                                  style: GoogleFonts.workSans(color: const Color(0xFFA0A0A0), fontSize: 12),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: notifications.length,
+                            itemBuilder: (context, index) {
+                        final item = notifications[index];
+
+                        return CurtainFallNotificationItem(
+                          index: index,
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: Dismissible(
+                              key: Key(item.id),
+                              direction: DismissDirection.horizontal,
+                              background: Container(
+                                color: const Color(0xFFB91C1C), // Solid Red Swipe
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                alignment: Alignment.centerLeft,
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
+                                    SizedBox(width: 6),
+                                    Text('DISMISS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                                  ],
+                                ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
+                              secondaryBackground: Container(
+                                color: const Color(0xFFB91C1C),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                alignment: Alignment.centerRight,
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text('DISMISS', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                                    SizedBox(width: 6),
+                                    Icon(Icons.delete_outline_rounded, color: Colors.white, size: 20),
+                                  ],
+                                ),
+                              ),
+                              onDismissed: (direction) async {
+                                setSheetState(() {
+                                  localDismissed.add(item.id);
+                                });
+                                await storageService?.dismissNotification(item.id);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF1E1E1E), // Metro Solid Card
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                                child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      item.title,
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: item.badgeBg,
+                                        borderRadius: BorderRadius.zero,
+                                      ),
+                                      child: Icon(item.icon, color: item.iconColor, size: 18),
                                     ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      item.subtitle,
-                                      style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, height: 1.3),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.title,
+                                            style: GoogleFonts.spaceGrotesk(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            item.subtitle,
+                                            style: GoogleFonts.workSans(
+                                              color: const Color(0xFFA0A0A0),
+                                              fontSize: 11,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white38, size: 16),
-                                onPressed: () async {
-                                  setSheetState(() {
-                                    localDismissed.add(item.id);
-                                  });
-                                  await storageService?.dismissNotification(item.id);
-                                },
-                              ),
-                            ],
+                            ),
                           ),
                         );
                       },
                     ),
-
-                  const SizedBox(height: 16),
-                ],
-              ),
+                  ),
+                ),
+              ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Windows 8 Metro Curtain Fall Entrance Animation for Notification Tiles
+class CurtainFallNotificationItem extends StatefulWidget {
+  final Widget child;
+  final int index;
+
+  const CurtainFallNotificationItem({
+    super.key,
+    required this.child,
+    required this.index,
+  });
+
+  @override
+  State<CurtainFallNotificationItem> createState() => _CurtainFallNotificationItemState();
+}
+
+class _CurtainFallNotificationItemState extends State<CurtainFallNotificationItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.0, -0.4), // Curtain fall down from top
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+
+    final delay = (widget.index * 70) + 50; // Staggered curtain fall delay
+    _timer = Timer(Duration(milliseconds: delay), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: widget.child,
       ),
     );
   }

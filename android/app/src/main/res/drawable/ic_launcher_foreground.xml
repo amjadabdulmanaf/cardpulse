@@ -5,36 +5,42 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-  <!-- Outer Neon Mint Card Border -->
+  <!-- Outer Credit Card Outline within Adaptive Safe Zone (x=26..82, y=36..72) -->
   <path
-      android:fillColor="#00FFA3"
-      android:pathData="M33,33 H75 A10,10 0 0,1 85,43 V65 A10,10 0 0,1 75,75 H33 A10,10 0 0,1 23,65 V43 A10,10 0 0,1 33,33 Z" />
+      android:fillColor="#0078D7"
+      android:pathData="M30,36 H78 A5,5 0 0,1 83,41 V67 A5,5 0 0,1 78,72 H30 A5,5 0 0,1 25,67 V41 A5,5 0 0,1 30,36 Z" />
 
-  <!-- Inner Obsidian Card Face -->
+  <!-- Inner Dark Obsidian Card Surface -->
   <path
-      android:fillColor="#080B0F"
-      android:pathData="M34.5,34.5 H73.5 A8.5,8.5 0 0,1 82,43 V63.5 A8.5,8.5 0 0,1 73.5,72 H34.5 A8.5,8.5 0 0,1 26,63.5 V43 A8.5,8.5 0 0,1 34.5,34.5 Z" />
+      android:fillColor="#121212"
+      android:pathData="M31.5,37.5 H76.5 A3.5,3.5 0 0,1 80,41 V65.5 A3.5,3.5 0 0,1 76.5,69 H31.5 A3.5,3.5 0 0,1 28,65.5 V41 A3.5,3.5 0 0,1 31.5,37.5 Z" />
 
-  <!-- Magnetic Stripe -->
+  <!-- Gold SIM Chip -->
   <path
-      android:fillColor="#121722"
-      android:pathData="M26,41 H82 V47 H26 Z" />
+      android:fillColor="#F09609"
+      android:pathData="M32,42 H40 V49 H32 Z" />
 
-  <!-- Pulse Wave Path -->
+  <!-- Magnetic Stripe Line -->
   <path
-      android:strokeWidth="3.2"
+      android:fillColor="#1E1E1E"
+      android:pathData="M28,51 H80 V55 H28 Z" />
+
+  <!-- Vibrant Pulse Wave Path -->
+  <path
+      android:strokeWidth="3.0"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M32,58 L40,58 L46,48 L51,64 L57,51 L62,58 L76,58">
+      android:pathData="M32,60 L41,60 L46,47 L52,66 L57,51 L62,60 L76,60">
     <aapt:attr name="android:strokeColor">
       <gradient
           android:startX="32"
-          android:startY="56"
+          android:startY="58"
           android:endX="76"
-          android:endY="56"
+          android:endY="58"
           android:type="linear">
-        <item android:offset="0.0" android:color="#00FFA3" />
-        <item android:offset="1.0" android:color="#38BDF8" />
+        <item android:offset="0.0" android:color="#0078D7" />
+        <item android:offset="0.5" android:color="#008A00" />
+        <item android:offset="1.0" android:color="#F09609" />
       </gradient>
     </aapt:attr>
   </path>

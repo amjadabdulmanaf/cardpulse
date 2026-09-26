@@ -36,18 +36,18 @@ class MacLikePageTransitionBuilder extends PageTransitionsBuilder {
 }
 
 class AppTheme {
-  // Obsidian Neon Fintech Palette
-  static const Color primaryMint = Color(0xFF00FFA3);
-  static const Color secondaryEmerald = Color(0xFF10B981);
-  static const Color tertiarySky = Color(0xFF38BDF8);
-  static const Color neutralObsidian = Color(0xFF080B0F);
-  static const Color surfaceCard = Color(0xFF121620);
-  static const Color surfaceElevated = Color(0xFF181E2C);
-  static const Color borderMetallic = Color(0xFF1E2536);
-  static const Color borderHighlight = Color(0xFF283146);
+  // Metro Pulse Design System Palette
+  static const Color primaryBlue = Color(0xFF0078D7);
+  static const Color secondaryGreen = Color(0xFF008A00);
+  static const Color tertiaryAmber = Color(0xFFF09609);
+  static const Color neutralObsidian = Color(0xFF121212);
+  static const Color surfaceCard = Color(0xFF1E1E1E);
+  static const Color surfaceElevated = Color(0xFF262626);
+  static const Color borderMetallic = Color(0xFF2D2D2D);
+  static const Color borderHighlight = Color(0xFF383838);
 
   static const Color textPlatinum = Color(0xFFF8FAFC);
-  static const Color textMuted = Color(0xFF94A3B8);
+  static const Color textMuted = Color(0xFFA0A0A0);
 
   static ThemeData get darkTheme {
     final baseTextTheme = ThemeData.dark().textTheme;
@@ -55,27 +55,27 @@ class AppTheme {
     return ThemeData.dark().copyWith(
       scaffoldBackgroundColor: neutralObsidian,
       colorScheme: const ColorScheme.dark(
-        primary: primaryMint,
-        secondary: secondaryEmerald,
-        tertiary: tertiarySky,
+        primary: primaryBlue,
+        secondary: secondaryGreen,
+        tertiary: tertiaryAmber,
         surface: surfaceCard,
         surfaceContainerHighest: surfaceElevated,
         onSurface: textPlatinum,
         outline: borderMetallic,
       ),
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(baseTextTheme).copyWith(
-        // Headlines -> Outfit
-        headlineLarge: GoogleFonts.outfit(textStyle: baseTextTheme.headlineLarge?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
-        headlineMedium: GoogleFonts.outfit(textStyle: baseTextTheme.headlineMedium?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
-        headlineSmall: GoogleFonts.outfit(textStyle: baseTextTheme.headlineSmall?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
-        titleLarge: GoogleFonts.outfit(textStyle: baseTextTheme.titleLarge?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
-        titleMedium: GoogleFonts.outfit(textStyle: baseTextTheme.titleMedium?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
-        titleSmall: GoogleFonts.outfit(textStyle: baseTextTheme.titleSmall?.copyWith(color: textPlatinum, fontWeight: FontWeight.w600)),
+      textTheme: GoogleFonts.workSansTextTheme(baseTextTheme).copyWith(
+        // Headlines -> Space Grotesk
+        headlineLarge: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.headlineLarge?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
+        headlineMedium: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.headlineMedium?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
+        headlineSmall: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.headlineSmall?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
+        titleLarge: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.titleLarge?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
+        titleMedium: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.titleMedium?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
+        titleSmall: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.titleSmall?.copyWith(color: textPlatinum, fontWeight: FontWeight.w600)),
 
-        // Body -> Plus Jakarta Sans
-        bodyLarge: GoogleFonts.plusJakartaSans(textStyle: baseTextTheme.bodyLarge?.copyWith(color: textPlatinum)),
-        bodyMedium: GoogleFonts.plusJakartaSans(textStyle: baseTextTheme.bodyMedium?.copyWith(color: textPlatinum)),
-        bodySmall: GoogleFonts.plusJakartaSans(textStyle: baseTextTheme.bodySmall?.copyWith(color: textMuted)),
+        // Body -> Work Sans
+        bodyLarge: GoogleFonts.workSans(textStyle: baseTextTheme.bodyLarge?.copyWith(color: textPlatinum)),
+        bodyMedium: GoogleFonts.workSans(textStyle: baseTextTheme.bodyMedium?.copyWith(color: textPlatinum)),
+        bodySmall: GoogleFonts.workSans(textStyle: baseTextTheme.bodySmall?.copyWith(color: textMuted)),
 
         // Labels -> Space Grotesk
         labelLarge: GoogleFonts.spaceGrotesk(textStyle: baseTextTheme.labelLarge?.copyWith(color: textPlatinum, fontWeight: FontWeight.bold)),
@@ -87,7 +87,7 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.outfit(
+        titleTextStyle: GoogleFonts.spaceGrotesk(
           color: textPlatinum,
           fontSize: 18,
           fontWeight: FontWeight.bold,

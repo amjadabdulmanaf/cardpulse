@@ -25,7 +25,12 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
+  int _currentIndex = 2; // Landing page = START in center
+  int _dashboardKeyCounter = 0;
+  int _cardsKeyCounter = 0;
+  int _emisKeyCounter = 0;
+  int _spendsKeyCounter = 0;
+  int _settingsKeyCounter = 0;
   List<CreditCard> _cards = [];
   List<TransactionItem> _transactions = [];
   List<EmiItem> _emis = [];
@@ -248,22 +253,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       );
     }
 
+    // Helper to increment keys and switch tab
+    void selectTab(int index) {
+      setState(() {
+        if (index == 0) _cardsKeyCounter++;
+        else if (index == 1) _emisKeyCounter++;
+        else if (index == 2) _dashboardKeyCounter++;
+        else if (index == 3) _spendsKeyCounter++;
+        else if (index == 4) _settingsKeyCounter++;
+        _currentIndex = index;
+      });
+    }
+
     // Screens list for 5 Bottom Nav Tabs
     final screens = [
-      // 1. Dashboard / Home
-      DashboardScreen(
-        storageService: widget.storageService,
-        cards: _cards,
-        transactions: _transactions,
-        emis: _emis,
-        onAddCard: _openAddCardDialog,
-        onAddEmi: (card) => _openAddEmiDialog(initialCard: card),
-        onAddSpend: (card) => _openAddTransactionDialog(initialCard: card),
-        onScanSms: _openSmsScanner,
-      ),
-
-      // 2. Cards Manager
+      // 0. Cards Manager
       CardsScreen(
+        key: ValueKey('cards_$_cardsKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -276,8 +282,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onScanSms: _openSmsScanner,
       ),
 
-      // 3. EMI Management
+      // 1. EMI Management
       EmiListScreen(
+        key: ValueKey('emis_$_emisKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -286,8 +293,23 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onDeleteEmi: _deleteEmi,
       ),
 
-      // 4. Spends / Full Transactions
+      // 2. START / Dashboard (Landing Page)
+      DashboardScreen(
+        key: ValueKey('dashboard_$_dashboardKeyCounter'),
+        storageService: widget.storageService,
+        cards: _cards,
+        transactions: _transactions,
+        emis: _emis,
+        onAddCard: _openAddCardDialog,
+        onAddEmi: (card) => _openAddEmiDialog(initialCard: card),
+        onAddSpend: (card) => _openAddTransactionDialog(initialCard: card),
+        onScanSms: _openSmsScanner,
+        onNavigateTab: selectTab,
+      ),
+
+      // 3. Spends / Full Transactions
       TransactionsScreen(
+        key: ValueKey('spends_$_spendsKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -298,8 +320,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onRefresh: _openSmsScanner,
       ),
 
-      // 5. Settings
+      // 4. Settings
       SettingsScreen(
+        key: ValueKey('settings_$_settingsKeyCounter'),
         storageService: widget.storageService,
         cards: _cards,
         transactions: _transactions,
@@ -310,7 +333,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0B0F19),
+      backgroundColor: const Color(0xFF121212),
       body: IndexedStack(
         index: _currentIndex,
         children: screens,
@@ -319,17 +342,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       // Dynamic Fluid Design Bottom Navigation Bar
       bottomNavigationBar: FluidBottomNavBar(
         selectedIndex: _currentIndex,
-        onTabSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTabSelected: selectTab,
         items: const [
-          FluidNavItem(icon: Icons.grid_view_rounded, label: 'Dashboard'),
-          FluidNavItem(icon: Icons.credit_card_outlined, label: 'Cards'),
-          FluidNavItem(icon: Icons.timelapse_rounded, label: 'EMIs'),
-          FluidNavItem(icon: Icons.insights_rounded, label: 'Spends'),
-          FluidNavItem(icon: Icons.settings_outlined, label: 'Settings'),
+          FluidNavItem(icon: Icons.credit_card_outlined, label: 'CARDS'),
+          FluidNavItem(icon: Icons.calendar_today_outlined, label: 'EMIS'),
+          FluidNavItem(icon: Icons.grid_view_rounded, label: 'START', isCenter: true),
+          FluidNavItem(icon: Icons.insights_rounded, label: 'SPENDS'),
+          FluidNavItem(icon: Icons.settings_outlined, label: 'SETTINGS'),
         ],
       ),
     );
